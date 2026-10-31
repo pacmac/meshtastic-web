@@ -342,9 +342,10 @@ action" repeats it for a third time.
    to land somewhere, and `aim`, `pki`, `packets` and `storeward` have no home in a
    Meshtastic client.
 
-6. **Does `_ble_scan` get lifted into core?** Independent of where the UI lives, and **the
-   weakest item here** — it is already tested and nothing duplicates it, so the case is the
-   principle alone. Fold it into the tidy-up or drop it; do not make it a job.
+6. ~~**Does `_ble_scan` get lifted into core?**~~ **ANSWERED — Peter, 2026-10-31: "yep that
+   seems right to me, it should be in core."** Ruled on the principle, with the weak case
+   for it stated plainly first: already tested, nothing duplicates it, no current pain.
+   This is a **mesh-gw** change and is tracked there, not in this repo.
 
 ---
 
