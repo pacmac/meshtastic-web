@@ -12,6 +12,15 @@ this fork lives on **mesh-gw's** channels, so every xsession call you make needs
 
 Nothing is pushed. Three branches have no remote at all.
 
+> **ADDRESSES IN THIS REPO ARE PLACEHOLDERS.** `radio-a.example.net`, `radio-b.example.net`,
+> `nginx-host`, `<gateway-ip>`, `<nginx-ip>` and `<scratchpad>` stand in for the real ones.
+> This fork's origin is **public**, and `deploy.sh`, `check.sh` and `nginx/mesh.conf` are
+> gitignored for the same reason — the docs must not publish what the configs are kept back
+> from publishing. **The real values are on the machine, not in git.** Node ids
+> (`!fdcee922`, `!db98d761`) and the aliases OMNI / YAGI are kept: a node id rides
+> unencrypted in the header of every packet the radio sends, so it is public by
+> construction, and the firmware measurements are unreadable without it.
+
 > ### WHERE THIS IS GOING — read before picking anything up
 >
 > Peter, 2026-10-31: *"most likely the mesh-gw dashboard will be deprecated with certain
@@ -124,7 +133,7 @@ steps 1–5 are mis-marked there, not here. Flagging, not touching.
 
 4. **GAP - `nginx/mesh.conf` exists only on this disk, and message storage depends on it.**
    Ranks here because the failure is silent and remote: the COOP/COEP headers live on
-   `nginx.ellis` and in a **gitignored** file. Rebuild that container and the client stops
+   `nginx-host` and in a **gitignored** file. Rebuild that container and the client stops
    saving messages while blaming a private window. Not urgent, genuinely dangerous.
 
 ### PETER'S — not your work
@@ -201,7 +210,7 @@ column says which ones the work actually rested on.
 | pre-commit hook | **used** | `.husky/pre-commit` → `pnpm lint-staged` → `oxlint`, `oxfmt` on `*.{ts,tsx}` | the only git hook; `.git/hooks/` has nothing but samples |
 | static server | **used** | `systemctl restart meshtastic-web`; `/usr/bin/python3 -I serve.py <dist> 8089` | `serve.py` does the **index.html fallback**. It lived only on `deploy` until today and the rebuild would have deleted it (now on `fork-notes`, `2eea5b21`) |
 | status | **used** | `./deploy.sh status` (repo root) | |
-| layer-by-layer checker | **used** | `./check.sh uk-omni.peter-c.net uk-yagi.peter-c.net` (repo root) — **22 ok, 0 failed** | read-only, changes nothing. **Gitignored** — hardcoded to one host. Walks DNS → 443 → certificate → four HTTP surfaces → CORS → which radio answers, in dependency order, and prints the fix for the layer that broke rather than a verdict |
+| layer-by-layer checker | **used** | `./check.sh radio-a.example.net radio-b.example.net` (repo root) — **22 ok, 0 failed** | read-only, changes nothing. **Gitignored** — hardcoded to one host. Walks DNS → 443 → certificate → four HTTP surfaces → CORS → which radio answers, in dependency order, and prints the fix for the layer that broke rather than a verdict |
 | e2e | **unused** | `pnpm test:e2e` → `playwright test`, `testDir ./e2e/tests`, `baseURL http://localhost:${WEB_PORT}` | needs the **docker device simulators** in `e2e/device/docker-compose.yml` and a Python peer (`e2e/peer/peer.py`). Four specs: `connect`, `messaging.broadcast`, `messaging.direct`, `responsive.mobile`. Never run this session |
 | bundle analysis | **unused** | `pnpm --filter "./apps/web" run build:analyze` | |
 | dev server | **unused** | `pnpm --filter "./apps/web" run dev` (or `dev:https`, which needs `setup:certs` → `mkcert`) | |
@@ -214,8 +223,8 @@ column says which ones the work actually rested on.
 | the device HTTP API | **used** | `GET https://<host>/api/v1/fromradio?all=true&framed=1`, `PUT .../api/v1/toradio` | **`GET` is a DESTRUCTIVE read.** Two clients sharing a `mesh_gw_http` cookie eat each other's handshake. `framed=1` is mesh-gw-only StreamAPI framing (`0x94 0xc3 <len hi> <len lo>`) |
 | reachability probe | **checked** | `curl -sI https://<host>/hotspot-detect.html` | the client fetches this **before** the API |
 | StreamAPI | **unused** | TCP `:4403` | what `meshtastic --host`, Android and iOS use. A browser cannot open a raw socket, which is the entire reason this fork exists |
-| the vhost | **used** | `curl -sI https://uk-omni.peter-c.net/` | lives on `nginx.ellis` at `/etc/nginx/sites.d/mesh.conf`, installed by hand. **The COOP/COEP headers are there and in a gitignored file** |
-| **the event stream** | **unused** | `ws://192.168.10.205:8001/events` (`mesh-gw/module/server.py:2256`) | `hello`, `device_snapshot` on connect, then `device_state` / `device_data` per device, **plus `ota_download_start\|progress\|complete\|error`**. Change-driven and small. **This is what the new management pages should consume** — node-dash's backend has read it for months |
+| the vhost | **used** | `curl -sI https://radio-a.example.net/` | lives on `nginx-host` at `/etc/nginx/sites.d/mesh.conf`, installed by hand. **The COOP/COEP headers are there and in a gitignored file** |
+| **the event stream** | **unused** | `ws://<gateway-ip>:8001/events` (`mesh-gw/module/server.py:2256`) | `hello`, `device_snapshot` on connect, then `device_state` / `device_data` per device, **plus `ota_download_start\|progress\|complete\|error`**. Change-driven and small. **This is what the new management pages should consume** — node-dash's backend has read it for months |
 | **the plugin page feed** | **unused** | `ws://…:8001/plugins/{name}/{feed}`, e.g. `/plugins/dashboard/live` (`:2868`) | **the defect, not a model to copy**: 13 whole pages re-serialised every 2.0 s, **1,351,064 B a frame**. `{"want":"<page id>"}` now gets one page (8%), but the broadcast is unchanged on purpose. See `docs/absorbing-the-gateway-dashboard.md` |
 | **BLE scan** | **unused** | `POST /ble/scan` (prefer over the kept `GET`) | **seizes the shared adapter ~10 s** and can return **503** on contention. Discards non-Meshtastic devices, so an empty result and a dead adapter look identical — show both counts |
 | **pair** | **unused** | `POST /ble/{address}/pair` | |
@@ -241,7 +250,7 @@ const payload = JSON.stringify({
   state: {
     devices: { __datatype: "Map", value: [] },
     savedConnections: [
-      { id: 1, type: "http", name: "OMNI", url: "https://uk-omni.peter-c.net",
+      { id: 1, type: "http", name: "OMNI", url: "https://radio-a.example.net",
         createdAt: Date.now(), status: "disconnected", isDefault: true, autoConnect: true },
     ],
   },
@@ -343,7 +352,7 @@ All local. Nothing pushed.
 
 Also in **mesh-gw** (that repo, committed there): `617b80a` — the `mesh_gw_http` cookie is
 now random instead of derived from the socket peer. Behind nginx every browser was handed
-`ip:192.168.10.104` (nginx's own address), and because `GET /api/v1/fromradio` is a
+`ip:<nginx-ip>` (nginx's own address), and because `GET /api/v1/fromradio` is a
 destructive read they ate each other's handshakes: two clients **stalled at 50 of 143
 frames each**. That was the cause of "hangs after loading about 50 nodes".
 
@@ -369,7 +378,7 @@ Step 4 of its mcpp task. Candidate alongside `multi-connection-sidebar` (upstrea
 the symptom — "those nodes really were not heard" — is wrong, and is exactly what the
 version check already assumed. Reproduce with
 `docs/heard-on-current-lora.md` + the probe in
-`/tmp/claude-0/-usr-share-pac-dev-projects-mt-radar-mesh-gw/522cf9c5-0bbe-4969-ace4-7517e59b127b/scratchpad/probe_raw15.py`
+`<scratchpad>/probe_raw15.py`
 (**scratchpad — will not survive; copy it into the repo if you want to keep it**).
 
 **BUG - `FORK.md`'s branch table is stale.** It lists four branches and the tree has seven;
@@ -388,11 +397,11 @@ reviewer should never see the broken version.
 
 **GAP - `nginx/mesh.conf` exists only on this disk.** It carries the COOP/COEP headers
 without which the client silently stops saving messages and blames a private window. Install
-path: `nginx.ellis:/etc/nginx/sites.d/mesh.conf`.
+path: `nginx-host:/etc/nginx/sites.d/mesh.conf`.
 
 **GAP - the vhost proxies only `/api/v1/` and `/hotspot-detect.html`.** `location /` goes to
 the static server on `:8089`, which falls back to `index.html` for any unknown path. So a
-fetch to `/ble/scan` or `/ota` through `uk-omni.peter-c.net` returns **this app's own HTML
+fetch to `/ble/scan` or `/ota` through `radio-a.example.net` returns **this app's own HTML
 with HTTP 200** — not a 404, a 200 with the wrong body, which `response.json()` turns into a
 parse error naming nothing. node-dash has an open item against mesh-gw for exactly this
 shape: *"GET /device-config/{mac} now returns your SPA HTML with a 200, and our BLE pairing
@@ -606,7 +615,7 @@ Discovered in all four places, not globbed.
 | `pnpm test` → `vitest` | `pr.yml`, and `test` in every package | **PASS** — SDK 183/183 (32 files), web 600/600 (81 files) |
 | `pnpm lint` → `oxlint` | `pr.yml`, `.husky/pre-commit` via lint-staged | **PASS**, exit 0 — **28 warnings, 0 errors**. Warnings do not fail it. Two point into `Connections/index.tsx` (`:277`, `:369`, `react(static-components)`) at code this session touched; **whether they predate the change is unverified** |
 | `pnpm format` → `oxfmt --check .` | `pr.yml` via `check` | **PASS** — "All matched files use the correct format", 723 files, 220 ms |
-| `./check.sh uk-omni.peter-c.net uk-yagi.peter-c.net` | a human only | **PASS — 22 ok, 0 failed**, run at write-up time. Certificates valid 89 more days; both names resolve to `192.168.10.104`; OMNI serves `!fdcee922` in **143 frames in one request**, YAGI `!db98d761` in **124**. Gitignored |
+| `./check.sh radio-a.example.net radio-b.example.net` | a human only | **PASS — 22 ok, 0 failed**, run at write-up time. Certificates valid 89 more days; both names resolve to `<nginx-ip>`; OMNI serves `!fdcee922` in **143 frames in one request**, YAGI `!db98d761` in **124**. Gitignored |
 | `pnpm --filter "./apps/web" run build` | `pr.yml` | **PASS** — `index-CCBQjtPj.js` |
 | `pnpm typecheck` (per package) | **NOTHING** | **FAIL, exit 1, 180 errors.** Not in `pr.yml`, not in `ci.yml`, not in any hook |
 | `pnpm test:e2e` → `playwright test` | `e2e.yml` | **NOT RUN** — needs docker device simulators |
