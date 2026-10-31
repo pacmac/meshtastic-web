@@ -51,6 +51,21 @@ export type Connection = {
   createdAt: number;
   lastConnectedAt?: number;
   isDefault?: boolean;
+  /**
+   * Open this connection on page load, without being asked.
+   *
+   * NOT the same question as `isDefault`, which only decides which saved
+   * connection the sidebar points at when none is live — it has never opened
+   * anything. HTTP only: Web Bluetooth and Web Serial hand out a handle only in
+   * response to a user gesture, and `cachedTransports` does not survive a
+   * reload, so an automatic BLE reconnect would throw or raise a chooser nobody
+   * asked for.
+   *
+   * Persists with no further work: `partialize` writes `savedConnections`
+   * whole, so there is no per-field allow-list to add it to. `undefined`
+   * already means off, so the store version does not move either.
+   */
+  autoConnect?: boolean;
   status: ConnectionStatus;
   error?: string;
   errorKind?: "cert" | "network";

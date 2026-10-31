@@ -2,7 +2,7 @@ import { create } from "@bufbuild/protobuf";
 import { UNKNOWN_NODE_SCOPE } from "@app/core/connections/sdkClient.ts";
 import type { Connection } from "@app/core/stores/deviceStore/types";
 import { useDeviceStore } from "@core/stores";
-import { type MeshDevice, Protobuf } from "@meshtastic/sdk";
+import { DeviceStatusEnum, type MeshDevice, Protobuf } from "@meshtastic/sdk";
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { useConnections } from "./useConnections.ts";
@@ -137,5 +137,66 @@ describe("useConnections storage scope", () => {
     expect(saved(conn.id)?.nodeNum).toBe(NODE);
 
     await act(() => result.current.disconnect(conn.id));
+  });
+});
+
+describe("useConnections lastConnectedAt", () => {
+  it("stamps the moment the radio answered, and a disconnect never writes it", async () => {
+    const { result } = renderHook(() => useConnections());
+    const conn = result.current.addConnection({
+      type: "serial",
+      name: "Serial",
+    });
+
+    // Opened, handshake under way, nothing has answered yet.
+    await act(() => result.current.connect(conn.id));
+    expect(saved(conn.id)?.status).toBe("configuring");
+    expect(saved(conn.id)?.lastConnectedAt).toBeUndefined();
+
+    const before = Date.now();
+    act(() => {
+      meshDeviceFor(conn.id).meshClient.events.onDeviceStatus.dispatch(
+        DeviceStatusEnum.DeviceConfigured,
+      );
+    });
+    expect(saved(conn.id)?.status).toBe("configured");
+    const stamp = saved(conn.id)?.lastConnectedAt;
+    expect(stamp).toBeGreaterThanOrEqual(before);
+
+    // The defect this test exists for: upstream wrote the field HERE, which
+    // recorded a disconnect under the name "last connected" — and on the HTTP
+    // path wrote it nowhere at all, because disconnect() never goes through
+    // updateStatus. The stamp must survive the disconnect unchanged.
+    await act(() => result.current.disconnect(conn.id));
+    expect(saved(conn.id)?.status).toBe("disconnected");
+    expect(saved(conn.id)?.lastConnectedAt).toBe(stamp);
+  });
+});
+
+describe("useConnections autoConnect", () => {
+  it("toggles, independently of isDefault", () => {
+    const { result } = renderHook(() => useConnections());
+    let conn!: Connection;
+    act(() => {
+      conn = result.current.addConnection({
+        type: "http",
+        name: "OMNI",
+        url: "uk-omni.peter-c.net",
+      });
+    });
+    expect(saved(conn.id)?.autoConnect).toBeUndefined();
+
+    act(() => result.current.setAutoConnect(conn.id));
+    expect(saved(conn.id)?.autoConnect).toBe(true);
+    // The two flags answer different questions; one must not move the other.
+    expect(saved(conn.id)?.isDefault).toBe(false);
+
+    act(() => result.current.setDefaultConnection(conn.id));
+    expect(saved(conn.id)?.isDefault).toBe(true);
+    expect(saved(conn.id)?.autoConnect).toBe(true);
+
+    act(() => result.current.setAutoConnect(conn.id));
+    expect(saved(conn.id)?.autoConnect).toBe(false);
+    expect(saved(conn.id)?.isDefault).toBe(true);
   });
 });

@@ -38,6 +38,7 @@ import {
 } from "@components/UI/DropdownMenu.tsx";
 import { Separator } from "@components/UI/Separator.tsx";
 import { useToast } from "@core/hooks/useToast.ts";
+import { cn } from "@core/utils/cn.ts";
 import { useNavigate } from "@tanstack/react-router";
 import {
   ArrowLeft,
@@ -48,7 +49,10 @@ import {
   Star,
   StarOff,
   Trash2,
+  Zap,
+  ZapOff,
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -60,6 +64,7 @@ export const Connections = () => {
     disconnect,
     removeConnection,
     setDefaultConnection,
+    setAutoConnect,
     refreshStatuses,
     syncConnectionStatuses,
   } = useConnections();
@@ -173,14 +178,22 @@ export const Connections = () => {
               }}
               onSetDefault={() => {
                 setDefaultConnection(c.id);
-                toast({
-                  title: t("toasts.defaultSet"),
-                  description: t("toasts.defaultConnection", {
-                    name: c.name,
-                    interpolation: { escapeValue: false },
-                  }),
-                });
+                // Only on the way ON. The badge is the control now, so it shows
+                // the new state itself — and "Default connection is now X" is a
+                // lie when the click just cleared it.
+                if (!c.isDefault) {
+                  toast({
+                    title: t("toasts.defaultSet"),
+                    description: t("toasts.defaultConnection", {
+                      name: c.name,
+                      interpolation: { escapeValue: false },
+                    }),
+                  });
+                }
               }}
+              // No toast: the badge changing IS the feedback, and the flag does
+              // nothing until the next page load, so there is nothing to report.
+              onSetAutoConnect={() => setAutoConnect(c.id)}
               onDelete={async () => {
                 await disconnect(c.id);
                 removeConnection(c.id);
@@ -254,11 +267,62 @@ function TypeBadge({ type }: { type: Connection["type"] }) {
   );
 }
 
+/**
+ * A per-connection flag, shown as a badge you click to toggle.
+ *
+ * ALWAYS PRESENT, filled when on and outlined when off. That is the whole point:
+ * a badge that appears only when the flag is set has no "off" state to click,
+ * which is why upstream needed a pair of overflow-menu items beside it. With the
+ * badge doing the work, one control shows the state and changes it.
+ */
+function FlagBadge({
+  on,
+  onToggle,
+  OnIcon,
+  OffIcon,
+  label,
+  title,
+  onIconClassName,
+}: {
+  on: boolean;
+  onToggle: () => void;
+  OnIcon: LucideIcon;
+  OffIcon: LucideIcon;
+  label: string;
+  title: string;
+  onIconClassName: string;
+}) {
+  const Icon = on ? OnIcon : OffIcon;
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      title={title}
+      aria-label={title}
+      aria-pressed={on}
+      className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
+    >
+      <Badge
+        variant={on ? "secondary" : "outline"}
+        className={cn(
+          "gap-1 cursor-pointer",
+          !on &&
+            "border-slate-300 text-slate-400 dark:border-slate-700 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300",
+        )}
+      >
+        <Icon className={cn("h-3.5 w-3.5", on && onIconClassName)} />
+        {label}
+      </Badge>
+    </button>
+  );
+}
+
 function ConnectionCard({
   connection,
   onConnect,
   onDisconnect,
   onSetDefault,
+  onSetAutoConnect,
   onDelete,
   onRetry,
 }: {
@@ -266,6 +330,7 @@ function ConnectionCard({
   onConnect: () => Promise<boolean> | Promise<void>;
   onDisconnect: () => Promise<void> | Promise<void>;
   onSetDefault: () => void;
+  onSetAutoConnect: () => void;
   onDelete: () => void;
   onRetry: () => Promise<boolean> | Promise<void>;
 }) {
@@ -286,11 +351,38 @@ function ConnectionCard({
             <CardTitle className="flex items-center gap-2">
               <Icon className="size-4 text-slate-500 dark:text-slate-400" />
               <span className="truncate">{connection.name}</span>
-              {connection.isDefault ? (
-                <Badge variant="secondary" className="gap-1">
-                  <Star className="h-3.5 w-3.5 fill-yellow-500 text-yellow-500" />
-                  {t("default")}
-                </Badge>
+              {/* HTTP only, the same restriction `isDefault` already carried:
+                  Web Bluetooth and Web Serial only hand out a handle on a user
+                  gesture, so neither flag can mean anything for them. */}
+              {connection.type === "http" ? (
+                <>
+                  <FlagBadge
+                    on={!!connection.isDefault}
+                    onToggle={onSetDefault}
+                    OnIcon={Star}
+                    OffIcon={StarOff}
+                    label={t("default")}
+                    title={
+                      connection.isDefault
+                        ? t("button.unsetDefault")
+                        : t("button.setDefault")
+                    }
+                    onIconClassName="fill-yellow-500 text-yellow-500"
+                  />
+                  <FlagBadge
+                    on={!!connection.autoConnect}
+                    onToggle={onSetAutoConnect}
+                    OnIcon={Zap}
+                    OffIcon={ZapOff}
+                    label={t("autoConnect")}
+                    title={
+                      connection.autoConnect
+                        ? t("button.unsetAutoConnect")
+                        : t("button.setAutoConnect")
+                    }
+                    onIconClassName="fill-green-500 text-green-500"
+                  />
+                </>
               ) : null}
             </CardTitle>
             <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
@@ -311,24 +403,9 @@ function ConnectionCard({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                {connection.type === "http" && connection.isDefault && (
-                  <DropdownMenuItem
-                    className="gap-2"
-                    onClick={() => onSetDefault()}
-                  >
-                    <StarOff className="size-4" />
-                    {t("button.unsetDefault")}
-                  </DropdownMenuItem>
-                )}
-                {connection.type === "http" && !connection.isDefault && (
-                  <DropdownMenuItem
-                    className="gap-2"
-                    onClick={() => onSetDefault()}
-                  >
-                    <Star className="size-4" />
-                    {t("button.setDefault")}
-                  </DropdownMenuItem>
-                )}
+                {/* Set/unset default used to live here, as two mutually
+                    exclusive items beside a badge that only displayed the
+                    state. The badge is the control now. */}
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
                     <DropdownMenuItem
