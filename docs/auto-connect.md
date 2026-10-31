@@ -92,7 +92,7 @@ Here both flags are **click-to-toggle badges**, always present, side by side:
 
 ```
 ┌ OMNI  [★ Default] [⚡ Auto] ──────────────┐     both on  — filled
-│ HTTP  uk-omni.peter-c.net                 │
+│ HTTP  radio-a.example.net                 │
 └───────────────────────────────────────────┘
 
 ┌ YAGI  [☆ Default] [⚡ Auto] ──────────────┐     default off — outlined, muted

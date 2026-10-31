@@ -181,7 +181,7 @@ describe("useConnections autoConnect", () => {
       conn = result.current.addConnection({
         type: "http",
         name: "OMNI",
-        url: "uk-omni.peter-c.net",
+        url: "radio-a.example.net",
       });
     });
     expect(saved(conn.id)?.autoConnect).toBeUndefined();
