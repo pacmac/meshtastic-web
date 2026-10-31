@@ -6,7 +6,6 @@ import type { ReadonlySignal } from "../../core/signals/createStore.ts";
 import type { Node } from "./domain/Node.ts";
 import type { NodeError, NodeErrorType } from "./domain/NodeError.ts";
 import type { NodesRepository } from "./domain/NodesRepository.ts";
-import { firmwareAtLeast } from "../device/domain/FirmwareVersion.ts";
 import { NodeMapper } from "./infrastructure/NodeMapper.ts";
 import { InMemoryNodesRepository } from "./infrastructure/repositories/InMemoryNodesRepository.ts";
 import { validateIncomingNode } from "./infrastructure/nodeValidation.ts";
@@ -42,6 +41,38 @@ export class NodesClient {
   private hydrated = false;
   /** Bumped on every storage rescope; see `ChatClient`. */
   private epoch = 0;
+  /**
+   * Has this radio EVER answered the heard_on_current_lora question?
+   *
+   * `NodeInfo.heard_on_current_lora` is field 15, a plain proto3 `bool` — not
+   * `optional` — so it has no presence. A false bool is omitted from the wire
+   * entirely, which makes "the radio has not heard this node" and "this build
+   * never sets the field" the same zero bytes. Nothing in a NodeInfo tells
+   * them apart.
+   *
+   * This used to be decided by `firmwareAtLeast(version, "2.8.1")`, on the
+   * assumption that the field arriving in 2.8.1 means every build from 2.8.1
+   * populates it. Measured against a RAK4631 running 2.8.1.c3df491, reading
+   * field 15 off the original frame bytes with nothing re-serialised: absent
+   * from all 96 NodeInfo frames it sends. The version said the field was
+   * trustworthy, the firmware never sent it, every node read false — and the
+   * entire node list rendered dimmed, on every visit.
+   *
+   * So ask the data rather than the version. A radio whose firmware answers
+   * this answers `true` for at least one node; one whose firmware does not
+   * never sends a true. Until a true arrives the question is UNANSWERED and
+   * nothing is treated as unheard.
+   */
+  private answersHeardOnCurrentLora = false;
+  /**
+   * Each node's raw wire value, kept beside the overridden one.
+   *
+   * The first true can arrive partway through the handshake dump, so the
+   * nodes stored while the question was still unanswered have to be
+   * re-evaluated — and by then their stored value has been overridden to
+   * true and the original is gone. One boolean per node buys that back.
+   */
+  private readonly rawHeardOnCurrentLora = new Map<number, boolean>();
 
   public readonly list: ReadonlySignal<ReadonlyArray<Node>>;
   public readonly errors: ReadonlySignal<ReadonlyArray<NodeError>>;
@@ -121,6 +152,8 @@ export class NodesClient {
 
     const existing = this.store.get(info.num);
     const mapped = NodeMapper.fromProto(verdict.accepted);
+    const raw = mapped.heardOnCurrentLora === true;
+    this.rawHeardOnCurrentLora.set(info.num, raw);
     const node: Node = {
       ...mapped,
       // Firmware 2.8 sends NodeInfo without position or metrics and replays
@@ -128,18 +161,34 @@ export class NodesClient {
       position: mapped.position ?? existing?.position,
       deviceMetrics: mapped.deviceMetrics ?? existing?.deviceMetrics,
       status: existing?.status,
-      heardOnCurrentLora:
-        mapped.heardOnCurrentLora || !this.firmwareReportsHeard(),
+      // While the radio has never said true, a false means nothing — see
+      // `answersHeardOnCurrentLora`.
+      heardOnCurrentLora: raw || !this.answersHeardOnCurrentLora,
     };
     this.store.set(node.num, node);
     if (this.errorsStore.has(node.num)) this.errorsStore.delete(node.num);
     void this.repository.upsert(node).catch(() => {});
+
+    // This node is the proof the firmware answers the question. Everything
+    // stored before it was given the benefit of the doubt and must now be
+    // re-read from what the radio actually sent.
+    if (raw && !this.answersHeardOnCurrentLora) {
+      this.answersHeardOnCurrentLora = true;
+      this.applyHeardOnCurrentLora();
+    }
   }
 
-  /** heard_on_current_lora exists from firmware 2.8.1. */
-  private firmwareReportsHeard(): boolean {
-    const version = this.client.device.metadata.value?.firmwareVersion;
-    return !!version && firmwareAtLeast(version, "2.8.1");
+  /** Restore every stored node's raw heard_on_current_lora. */
+  private applyHeardOnCurrentLora(): void {
+    for (const node of this.list.value) {
+      const raw = this.rawHeardOnCurrentLora.get(node.num);
+      // A node seeded by a stray UserPacket or PositionPacket never carried a
+      // NodeInfo, so the radio has not answered the question for it.
+      if (raw === undefined || node.heardOnCurrentLora === raw) continue;
+      const next: Node = { ...node, heardOnCurrentLora: raw };
+      this.store.set(next.num, next);
+      void this.repository.upsert(next).catch(() => {});
+    }
   }
 
   /**
@@ -188,6 +237,11 @@ export class NodesClient {
     this.epoch++;
     this.store.clear();
     this.errorsStore.clear();
+    // Whether the field is answered is a property of the RADIO, so pointing at
+    // another one makes the question unanswered again. Carrying a `true` over
+    // would dim the new radio's whole list on its first NodeInfo.
+    this.answersHeardOnCurrentLora = false;
+    this.rawHeardOnCurrentLora.clear();
     this.hydrated = false;
     void this.hydrate();
   }

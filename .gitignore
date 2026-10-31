@@ -21,3 +21,7 @@ packages/protobufs/packages/ts/dist
 
 # Claude Code session locks
 .claude/
+
+# The pinned Buf CLI, fetched by deploy.sh. A 60 MB binary does not belong in git,
+# and the version it must be is in deploy.sh, which does belong here.
+.tools/
