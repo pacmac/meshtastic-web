@@ -178,7 +178,7 @@ verified in the source:
    /ble/scan`, the Pi's adapter, sees what is near the *mast*. The radios are on a 3 m roof
    mast. One button called "scan for BLE devices" would be a lie about which of the two it
    means.
-4. **The hostnames assume a radio.** `uk-omni` / `uk-yagi` exist because `TransportHTTP`
+4. **The hostnames assume a radio.** `radio-a` / `radio-b` exist because `TransportHTTP`
    takes an address with no path, so mesh-gw picks the radio from `Host`. A gateway verb has
    no radio and would need its own name.
 
@@ -261,7 +261,7 @@ disk and on `nginx-host`, so it is also the least discoverable file in the syste
 `HANDOVER.md`.
 
 **Open question, for Peter:** should the gateway's management routes be reachable from the
-radio hostnames at all? `uk-omni` / `uk-yagi` currently mean "this radio", and `Host` is what
+radio hostnames at all? `radio-a` / `radio-b` currently mean "this radio", and `Host` is what
 mesh-gw uses to pick one. Scan, pair and firmware are gateway-level, not radio-level, so a
 third name (`gateway.example.net`, say) may be the honest mapping rather than bolting
 gateway verbs onto a radio's name.
