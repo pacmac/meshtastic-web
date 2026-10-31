@@ -31,6 +31,41 @@ Nothing is pushed. Three branches have no remote at all.
 > `docs/handover/2026-10-31-0958.md`. Nothing in it was wrong; it was simply written for
 > a smaller job.*
 
+> ### THE OTHER REPO — where the last hour of work actually went
+>
+> **This is the gap most likely to waste your time.** After the direction above was set,
+> the work moved to **mesh-gw**, not here. A session seated in this folder will not see
+> any of it in `git log`, because it is in another repository:
+>
+> | mesh-gw commit | what |
+> |---|---|
+> | `bb146ba` | **BLE scan moved into core.** `core/ble_scan.py` is new; `module/server.py::_ble_scan` is now 30 lines of HTTP mapping. `ScanVerdict` (`found` / `adapter_saw_nothing` / `none_look_meshtastic`) is **returned**, not only logged, with `discovered` and `kept` beside it. `BleScanResponse` gained five optional fields. **NOT DEPLOYED** |
+> | `48860b5` | **`docs/modules/meshctl.md`** — spec for a structured CLI over the published contract. Nothing built |
+> | `3740ea1` | mesh-gw's own handover, amended — it was seven weeks old |
+>
+> Two mesh-gw specs are the reading, not this file:
+> `mesh-gw/docs/modules/ble_scan.md` and `mesh-gw/docs/modules/meshctl.md`.
+>
+> **The architecture, settled by measurement today, because it was being described
+> backwards:**
+>
+> ```
+> module/   (6 files)   THE APP — systemd runs `python3 -m module.main`.
+>                       40 runtime imports of core.  server.py is 3,590 of its 4,715 lines.
+> plugins/  (61 files)  OPTIONAL — core/plugins.py records `skipped` / `disabled in config`
+>                       and carries on.  70 imports of core.
+> core/     (39 files)  THE FLOOR — ZERO runtime imports of either. The two greps that
+>                       look like core→module are both inside `if TYPE_CHECKING:`.
+> ```
+>
+> So `module/` is **not** "needed by core" — it is the application that needs core. The
+> naming trap that produces the inverted model: `docs/modules/` is the *spec* directory,
+> and 38 of its 121 specs describe files in `core/` against only 8 in `module/`.
+>
+> **The rule that follows, and that caught today's work:** a thing belongs in `core/` when
+> it *decides* something, and in `module/` only when it is mapping that decision onto
+> HTTP. `_ble_scan` was on the wrong side of that line.
+
 ---
 
 ## AUDIT
@@ -436,6 +471,28 @@ the correct one, and the real answer is that ~74% is historical chart and messag
 **Class of error:** quoting a number derived for one question as the answer to a different
 one. Recorded because the wrong figure is the one that gets repeated.
 
+**I ran a destructive git command before validating its arguments THREE times in one
+day.** (1) `git reset --hard` on `deploy` before checking the branch names resolved —
+recovered from reflog. (2) `git stash push -q <paths>` failed silently because one path was
+untracked, so the `pop` behind it restored **another session's stash** —
+`stash@{0}: "uncommitted 4th pki change - held pending investigation"` — conflicting
+mesh-gw's `idiot.yaml`, `docs/flow/index.html`, `docs/modules/pki_plugin.md` and
+`plugins/pki/__init__.py`; recovered in full, the stash is intact, and the six untracked
+files it dragged in were verified byte-identical and **moved, not deleted**, to the
+scratchpad. (3) `git checkout deploy -- docs/HANDOVER.md` on another branch, which
+**silently discarded uncommitted edits to this very file** — not recoverable from git, and
+only redoable because the text was still in the conversation.
+**Class of error: a command whose first half can fail quietly, or which overwrites without
+asking, run without first checking what it would act on.** Three instances, one class, one
+day — the frequency is the finding, not any single slip.
+
+**I twice argued a case stronger than the evidence, and the checks caught both.** I said
+`_ble_scan` was untestable without an HTTP server (it was already covered) and that a
+second consumer would duplicate its filter (nothing does). I also said the CLI had drifted
+because nothing checked it — diffing its calls against the live contract gives **0
+missing** paths. **Class of error: asserting the supporting arguments for a conclusion I
+had already reached.** The conclusion survived each time; the arguments did not.
+
 **I over-estimated the public-repo problem and said so twice before measuring it.** I
 described `deploy.sh` and `check.sh` as site-specific; they are ~11 lines of site-specific
 text in ~360 lines, mostly inside help strings. Peter's follow-up was the correction.
@@ -465,8 +522,18 @@ filing my own tooling bug as a defect in the system under test.
 - **`mcp__playwright__browser_take_screenshot` writes to the relay host.** Assert on the DOM
   with `browser_evaluate` — `rows.filter(r => r.className.includes('opacity-60')).length`
   beats looking at a picture you cannot open.
-- **Prove a test bites before believing it.** `git stash push <the source file>` only, re-run,
-  read the failure count, `git stash pop`. Announce it out loud first: it is a shell write.
+- **Never chain `git stash push` into anything, and never `git checkout <branch> -- <file>`
+  over work you have not committed.** `push -q <paths>` fails silently if any path is
+  untracked and the `pop` behind it pops **somebody else's stash**; `checkout -- <file>`
+  discards uncommitted edits with no prompt and no reflog. Run `git stash list` first, run
+  the push alone, confirm it made an entry. **Commit the file you are editing before you
+  change branch** — that is the whole of the lesson, three incidents deep.
+- **Prove a test bites before believing it.** Revert the source file only, re-run, read the
+  failure count, restore. Announce it out loud first: it is a shell write. An `Edit` that
+  breaks one line and an `Edit` that restores it is safer than a stash round-trip.
+- **State the weak case first.** Twice today I gave three arguments for a conclusion and
+  two of them failed checking. If a conclusion rests on a principle rather than on
+  observed pain, say so — Peter ruled for it anyway, and he ruled on something true.
   Four of my five `ConnectedDevices` tests pass against the broken code — that is how the bug
   shipped in the first place.
 - **`deploy` is REBUILT, not merged into.** Anything committed directly to it is deleted by
@@ -515,7 +582,9 @@ mcpp project is **`mesh-gw`** for all of these — this repo has no project of i
 | `auto-connect-badge-on-the-web-client-fork` | **5/5, closed on this audit** | `docs/auto-connect.md` |
 | `every-node-is-dimmed-because-a-version-check-stands-in-for-a-capability` | 3/4 — **step 4, the upstream issue, not started** | `docs/heard-on-current-lora.md` |
 | `switching-radios-moves-the-sdk-but-not-the-legacy-device-store` | **complete** | `docs/switching-radios-moves-three-things.md` |
-| `move-ble-scan-pair-and-firmware-into-the-web-client-fork` | **new, 0/5, nothing built** — step 1 is a DECIDE | `docs/absorbing-the-gateway-dashboard.md` |
+| `move-ble-scan-pair-and-firmware-into-the-web-client-fork` | **0/5, nothing built** — and its premise moved: Peter now leans to management STAYING on mesh-gw. Step 1 is a DECIDE | `docs/absorbing-the-gateway-dashboard.md` |
+| `ble-scan-is-a-decision-sitting-in-a-route-file` | **3/3 complete** — mesh-gw `bb146ba`, **not deployed** | `mesh-gw/docs/modules/ble_scan.md` |
+| `the-cli-lies-about-the-gateway-and-covers-a-tenth-of-it` | **0/5, spec only** — mesh-gw `48860b5` | `mesh-gw/docs/modules/meshctl.md` |
 | `park-the-deploy-tooling-should-ask-and-generate-not-hardcode-one-host` | parked, **not started**, holds Peter's wording | none yet |
 | `the-web-client-cannot-connect-because-there-is-no-http-protobuf-transport` | **mis-marked in mesh-gw** — steps 1–5 read `[ ]`, all are done | `docs/modules/http_api.md` (in mesh-gw) |
 
