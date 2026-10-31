@@ -348,8 +348,12 @@ function ConnectionCard({
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <CardTitle className="flex items-center gap-2">
-              <Icon className="size-4 text-slate-500 dark:text-slate-400" />
+            {/* WRAPS, because three cards fit across an xl viewport and a name plus two
+                badges does not fit one line in that width. Without this the name is the
+                element that gives way — "OMNI" rendered as "O…" beside two badges, which
+                is the wrong thing to lose. */}
+            <CardTitle className="flex flex-wrap items-center gap-2">
+              <Icon className="size-4 shrink-0 text-slate-500 dark:text-slate-400" />
               <span className="truncate">{connection.name}</span>
               {/* HTTP only, the same restriction `isDefault` already carried:
                   Web Bluetooth and Web Serial only hand out a handle on a user
