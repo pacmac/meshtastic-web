@@ -4,6 +4,7 @@ import {
   useSetActiveConnectionId,
 } from "@app/core/stores/deviceStore/selectors.ts";
 import { meshRegistry } from "@app/core/meshRegistry.ts";
+import { useAppStore } from "@app/core/stores";
 import type { Connection } from "@app/core/stores/deviceStore/types.ts";
 
 /* EVERY LIVE CONNECTION, not just the active one.
@@ -21,10 +22,30 @@ import type { Connection } from "@app/core/stores/deviceStore/types.ts";
  * app was multi-connection everywhere except the one component that displays it.
  *
  * SWITCHING SETS THE ACTIVE CLIENT AND NOTHING ELSE. The others stay connected and keep
- * receiving — they are separate transports to separate radios. `meshRegistry.setActive`
- * is what the `useMeshDevice()` / `useChat()` hooks read, and the store's
- * `activeConnectionId` is what the rest of the UI reads, so both are set together; one
- * without the other leaves the pages showing a different radio from the one highlighted.
+ * receiving — they are separate transports to separate radios.
+ *
+ * THREE THINGS NAME "THE CURRENT RADIO", and a switch has to move all three. This file
+ * shipped moving two, and the third is a whole half of the app:
+ *
+ *   meshRegistry.setActive(id)   the active MeshClient, read by useMeshDevice() /
+ *                                useChat() / useNodes() — the node list, battery, voltage
+ *   activeConnectionId           the highlighted row, read by useActiveConnection()
+ *   selectedDeviceId (appStore)  the LEGACY per-device store key, read through
+ *                                DeviceWrapper -> CurrentDeviceContext -> useDevice()
+ *
+ * `selectedDeviceId` was written only by `connect()`, so after two radios connect it
+ * held whichever finished LAST and a switch never moved it again. Everything behind
+ * `useDevice()` then described the wrong radio: the sidebar's firmware line, every
+ * firmware-gated control in Settings, `useDeviceCapabilities`, and the waypoints,
+ * traceroutes, neighbour info and unread counts that `subscribeAll` files there.
+ *
+ * MEASURED, OMNI and YAGI both connected, switching YAGI -> OMNI:
+ *
+ *     nodes 79 -> 95     battery 94% -> 99%     firmware 2.7.26 -> 2.7.26
+ *
+ * and OMNI connected alone reads 2.8.1.c3df491 — so the value arrives, and was being
+ * read off the other radio. A hard refresh cannot help: it is rebuilt from the live
+ * handshake every load, and the load re-makes the same wrong association.
  */
 
 /** Connected enough to be worth listing. `configuring` is included deliberately: a radio
@@ -46,6 +67,7 @@ export function ConnectedDevices({ isCollapsed }: { isCollapsed: boolean }) {
   const connections = useSavedConnections();
   const activeId = useActiveConnectionId();
   const setActiveId = useSetActiveConnectionId();
+  const setSelectedDevice = useAppStore((s) => s.setSelectedDevice);
 
   const live = connections.filter((c: Connection) => LIVE.has(c.status));
 
@@ -56,9 +78,20 @@ export function ConnectedDevices({ isCollapsed }: { isCollapsed: boolean }) {
     return null;
   }
 
-  const select = (id: number) => {
-    meshRegistry.setActive(id);
-    setActiveId(id);
+  const select = (conn: Connection) => {
+    meshRegistry.setActive(conn.id);
+    setActiveId(conn.id);
+    // `meshDeviceId` is exactly what connect() handed setSelectedDevice, so there is
+    // nothing to derive here.
+    //
+    // THE GUARD IS LOAD-BEARING. App renders the Connections SCREEN whenever
+    // `getDevice(selectedDeviceId)` is falsy, so writing an absent id would not merely
+    // show stale data — it would drop the whole app back to the connection list
+    // mid-session. A live connection always has one, because connect() writes it before
+    // the handshake finishes; this is here because the cost of being wrong is the UI.
+    if (conn.meshDeviceId !== undefined) {
+      setSelectedDevice(conn.meshDeviceId);
+    }
   };
 
   return (
@@ -75,7 +108,7 @@ export function ConnectedDevices({ isCollapsed }: { isCollapsed: boolean }) {
             <li key={c.id}>
               <button
                 type="button"
-                onClick={() => select(c.id)}
+                onClick={() => select(c)}
                 aria-current={isActive ? "true" : undefined}
                 title={`${c.name} — ${c.status}`}
                 className={`flex w-full items-center gap-2 rounded px-2 py-1 text-left text-sm
