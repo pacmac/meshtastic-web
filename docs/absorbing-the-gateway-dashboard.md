@@ -128,13 +128,29 @@ make decisions."* **Moving or tidying the UI moves no capability.** That is what
 "stays on mesh-gw but tidied up" cheap, and it is also what would have made the other option
 cheap — the choice is genuinely about where a human looks, not about where logic lives.
 
-**The exception is the one to fix either way.** `_ble_scan` is a decision sitting in a route
-file: a ten-second seizure of the shared adapter, a 503 contention rule, and the discard of
-non-Meshtastic devices that makes "no radios advertising" and "your Bluetooth is dead" look
-identical. Any second viewer of that capability must either duplicate the filter or go
-through HTTP to reach it. Lifting it into `core/` — input: a timeout; output: discovered
-count, Meshtastic count, the list — makes it testable without an HTTP server and movable by
-copying one file and its check, which is the `build it modular` rule.
+**The exception, stated at its real weight.** `_ble_scan` is 88 lines nested at indent 4
+inside the route-registration function, so it cannot be imported. It holds policy — a
+ten-second seizure of the shared adapter, a 503 contention rule, and the discard of
+non-Meshtastic devices that makes "no radios advertising" and "your Bluetooth is dead"
+produce identical output. That policy sitting above the core line is the one principled
+objection, and lifting it into `core/` — in: a timeout; out: discovered count, Meshtastic
+count, the list — is what `build it modular` asks for.
+
+**Two arguments that look good and do not hold, checked rather than assumed:**
+
+- *"It is untestable without an HTTP server."* It is **already tested**.
+  `tests/check_a_scan_says_why_it_found_nothing.py` drives the real route through
+  `create_app()` and a FastAPI TestClient with `BleakScanner.discover` replaced, and says
+  plainly what it does not cover and why: loading the real thing means restarting mesh-gw,
+  which drops both radios for 18–54 s, and a real scan seizes the adapter the radios are
+  connected through. The cost is real but it is being paid, and paid deliberately.
+- *"A second consumer would duplicate the filter."* **Nothing does.**
+  `plugins/discovery/` contains no Python. `core/dfu_lib.py` scans (`BleakScanner(adapter=…)`
+  at :386, `find_device_by_address` at :395) but answers a different question — find *this*
+  address during a flash. The duplication is hypothetical.
+
+So this is **a tidy-up with a principle behind it and no current pain**. It belongs inside
+the dashboard tidy-up if that happens; it does not justify a session of its own.
 
 ---
 
@@ -326,9 +342,9 @@ action" repeats it for a third time.
    to land somewhere, and `aim`, `pki`, `packets` and `storeward` have no home in a
    Meshtastic client.
 
-6. **Does `_ble_scan` get lifted into core?** Independent of where the UI lives. It is the
-   one piece of this capability that is not in core, and it is the one with a contention
-   rule and a silent-discard behaviour worth testing without an HTTP server.
+6. **Does `_ble_scan` get lifted into core?** Independent of where the UI lives, and **the
+   weakest item here** — it is already tested and nothing duplicates it, so the case is the
+   principle alone. Fold it into the tidy-up or drop it; do not make it a job.
 
 ---
 
