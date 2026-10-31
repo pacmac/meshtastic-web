@@ -9,6 +9,51 @@ const FETCH_INTERVAL_MS = 3000;
 const READ_TIMEOUT_MS = 7000;
 const WRITE_TIMEOUT_MS = 4000;
 
+/** StreamAPI frame header: magic, then a 16-bit big-endian length. */
+const FRAME_MAGIC_0 = 0x94;
+const FRAME_MAGIC_1 = 0xc3;
+
+/**
+ * Split a StreamAPI-framed body into its payloads, or null if it is not framed.
+ *
+ * WHY THIS IS NEEDED. `GET /api/v1/fromradio` hands out ONE protobuf per request, so a
+ * handshake costs one round trip per frame — measured against a live gateway, 139 frames
+ * and 142 round trips. On the same machine that is ~6 s; from a browser 200 ms away it is
+ * minutes, every page reload, for every radio.
+ *
+ * `all=true` is in the device API spec and cannot fix it: the body is bare concatenated
+ * protobufs, protobuf is not self-delimiting, and `decodePacket` parses exactly one
+ * `FromRadio` per chunk — so a concatenation merges into a single message and, the
+ * payload being a `oneof`, only the last frame survives.
+ *
+ * So a batch has to carry lengths. This reuses the framing the project already has on
+ * serial, BLE and TCP rather than inventing a third encoding for one transport.
+ *
+ * NULL, NOT AN EXCEPTION, for anything that is not framed: the caller uses it to notice a
+ * peer that does not speak this and fall back, which is what makes the request safe to
+ * send to a device that has never heard of it.
+ */
+export function deframeStreamApi(body: Uint8Array): Uint8Array[] | null {
+  const out: Uint8Array[] = [];
+  let i = 0;
+  while (i < body.length) {
+    if (
+      i + 4 > body.length ||
+      body[i] !== FRAME_MAGIC_0 ||
+      body[i + 1] !== FRAME_MAGIC_1
+    ) {
+      return null;
+    }
+    const len = ((body[i + 2] ?? 0) << 8) | (body[i + 3] ?? 0);
+    if (i + 4 + len > body.length) {
+      return null;
+    }
+    out.push(body.subarray(i + 4, i + 4 + len));
+    i += 4 + len;
+  }
+  return out.length ? out : null;
+}
+
 function toArrayBuffer(uint8array: Uint8Array): ArrayBuffer {
   if (
     uint8array.buffer instanceof ArrayBuffer &&
@@ -33,6 +78,12 @@ export class TransportHTTP implements Transport {
 
   private url: string;
   private receiveBatchRequests: boolean;
+  /**
+   * Ask for the whole queue in one framed body. Tried first and switched OFF
+   * permanently the moment a peer answers something that is not framed, so a device
+   * that has never heard of the parameter costs exactly one wasted response.
+   */
+  private framedBatch: boolean;
   private fetchInterval: number;
   private fetching: boolean;
   private interval: ReturnType<typeof setInterval> | undefined;
@@ -68,6 +119,7 @@ export class TransportHTTP implements Transport {
   constructor(url: string) {
     this.url = url;
     this.receiveBatchRequests = false;
+    this.framedBatch = true;
     this.fetchInterval = FETCH_INTERVAL_MS;
     this.fetching = false;
 
@@ -123,8 +175,11 @@ export class TransportHTTP implements Transport {
       ]);
 
       try {
+        const query = this.framedBatch
+          ? "all=true&framed=1"
+          : `all=${this.receiveBatchRequests ? "true" : "false"}`;
         const response = await fetch(
-          `${this.url}/api/v1/fromradio?all=${this.receiveBatchRequests ? "true" : "false"}`,
+          `${this.url}/api/v1/fromradio?${query}`,
           withLocalNetworkTarget(this.url, {
             method: "GET",
             headers: { Accept: "application/x-protobuf" },
@@ -142,10 +197,37 @@ export class TransportHTTP implements Transport {
         readBuffer = await response.arrayBuffer();
 
         if (readBuffer.byteLength > 0) {
-          this.fromDeviceController?.enqueue({
-            type: "packet",
-            data: new Uint8Array(readBuffer),
-          });
+          if (this.framedBatch) {
+            // ONE BODY, MANY FRAMES. Split on StreamAPI framing and enqueue each
+            // separately, because the decoder parses exactly one FromRadio per chunk
+            // (`fromBinary(FromRadioSchema, chunk.data)`) — handing it a concatenation
+            // would merge every message into one and, the payload being a `oneof`, leave
+            // only the last. That is why `all=true` has never been usable.
+            const frames = deframeStreamApi(new Uint8Array(readBuffer));
+            if (frames === null) {
+              // NOT FRAMED: the peer does not speak this, so stop asking and let the
+              // next poll fall back to one frame per request. Degrading beats failing,
+              // and this is the only way a caller finds out — the parameter is ours, not
+              // the device API's, so an older gateway simply ignores it.
+              this.framedBatch = false;
+              this.fromDeviceController?.enqueue({
+                type: "packet",
+                data: new Uint8Array(readBuffer),
+              });
+            } else {
+              for (const frame of frames) {
+                this.fromDeviceController?.enqueue({
+                  type: "packet",
+                  data: frame,
+                });
+              }
+            }
+          } else {
+            this.fromDeviceController?.enqueue({
+              type: "packet",
+              data: new Uint8Array(readBuffer),
+            });
+          }
         }
       } finally {
         this.inflightReadController = undefined;
