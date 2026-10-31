@@ -6,9 +6,33 @@ Peter, 2026-10-31:
 > ability to scan for BLE devices and pair them and update firmware added to this new
 > dashboard using the same style and ui framework as the original.
 
+and, after the bootstrap problem below was put to him, the same day:
+
+> maybe that part has to stay on mesh-gw but be tidied up.
+
 This note is the design surface for that. It is a **spec, not a plan of work** — nothing in
 it has been built. Every number and route in it was read off the running gateway or its
 source on 2026-10-31; where something is unverified it says so.
+
+> ## THE LEADING OPTION IS NOW: MANAGEMENT STAYS ON mesh-gw
+>
+> **Not decided — Peter said "maybe" — but it is the leading option and it has one
+> argument that the other does not survive.** See THE BOOTSTRAP PROBLEM below; in short,
+> **you cannot sanely flash a radio from a UI whose transport runs through that radio.**
+>
+> Under this option the split is by SCOPE, not by convenience:
+>
+> | scope | lives | why |
+> |---|---|---|
+> | the gateway and its adapter — BLE scan, pair, adopt/drop, firmware files, flashing | **mesh-gw** | none of it has a radio to connect through, and flashing destroys its own transport |
+> | a radio and the mesh — nodes, messages, map, traceroute, config, position | **this app** | it is already the Meshtastic client for exactly these |
+>
+> And the feed defect changes shape with it: **most of the 1.35 MB is the pages that
+> leave.** See WHAT THE TIDY-UP DOES TO THE BYTES.
+>
+> The rest of this note — the routes, the traps, the decisions — is written for the
+> absorb-into-this-app option. **Read it as the alternative, and as the inventory of what
+> the gateway surface actually is**, which is needed either way.
 
 ---
 
@@ -82,6 +106,89 @@ still open.
 
 **If the dashboard is being retired, that entry may be closed by deletion rather than by a
 fix.** That is a decision, not an assumption — see DECISIONS below.
+
+---
+
+## IT IS ALREADY IN CORE — which is why this is a UI decision and not an architecture one
+
+Peter: *"but that is already part of core isn't it?"* **Yes, with one exception.** Checked
+in `mesh-gw` on 2026-10-31:
+
+| capability | where the logic lives | route is thin? |
+|---|---|---|
+| OTA / flashing | `core/ota_session.py`; `POST /ota` calls `flash_preflight(dev, fw_name, ota_cfg=…)` and `probe_ble_visibility(…)` | **yes** |
+| pairing | `core/ble_agent.py` (`_PairingAgent`, `stored_pin`, `pin_is_verified`, `setup_pairing_agent`); the route goes through `dm.get_by_ble(…)` | **yes** |
+| the BLE session | `core/ble_device.py`, `core/ble_health.py` | **yes** |
+| devices | `module/device_manager.py` (`dm`) | **yes** |
+| **BLE scan** | **`module/server.py::_ble_scan` at :2024 — calls `BleakScanner.discover` directly, and filters and logs inline** | **no — it IS the logic** |
+
+So the dashboard really is presentation over a core that already decides everything, which
+is the standing rule working as intended: *"the UI is a presentation layer only. it does not
+make decisions."* **Moving or tidying the UI moves no capability.** That is what makes
+"stays on mesh-gw but tidied up" cheap, and it is also what would have made the other option
+cheap — the choice is genuinely about where a human looks, not about where logic lives.
+
+**The exception is the one to fix either way.** `_ble_scan` is a decision sitting in a route
+file: a ten-second seizure of the shared adapter, a 503 contention rule, and the discard of
+non-Meshtastic devices that makes "no radios advertising" and "your Bluetooth is dead" look
+identical. Any second viewer of that capability must either duplicate the filter or go
+through HTTP to reach it. Lifting it into `core/` — input: a timeout; output: discovered
+count, Meshtastic count, the list — makes it testable without an HTTP server and movable by
+copying one file and its check, which is the `build it modular` rule.
+
+---
+
+## THE BOOTSTRAP PROBLEM — the reason the leading option is what it is
+
+Management is **gateway-scoped**. This app models **radios**. Four consequences, each
+verified in the source:
+
+1. **This app is gated on already having a radio.** `apps/web/src/App.tsx:62` renders the
+   entire application only when `getDevice(selectedDeviceId)` is truthy; otherwise it
+   renders `<Connections />` and nothing else. Management inside that gate means **you can
+   never add your first radio and never recover your last one**.
+2. **Flashing destroys its own transport.** Flash OMNI through `uk-omni.peter-c.net` and the
+   radio reboots — the `/api/v1` queue goes with it, and from the UI that is
+   indistinguishable from a failure. This matters more than usual given the standing rule
+   never to interrupt a live OTA: a progress bar that goes red mid-flash *invites* a retry.
+   **This is the argument the absorb option does not survive.**
+3. **Two BLE scanners that see different radios.** This app already has one —
+   `core/connections/transports.ts:100`, `navigator.bluetooth.requestDevice`, user gesture,
+   native chooser, sees what is near the *browser*. The gateway has another — `POST
+   /ble/scan`, the Pi's adapter, sees what is near the *mast*. The radios are on a 3 m roof
+   mast. One button called "scan for BLE devices" would be a lie about which of the two it
+   means.
+4. **The hostnames assume a radio.** `uk-omni` / `uk-yagi` exist because `TransportHTTP`
+   takes an address with no path, so mesh-gw picks the radio from `Host`. A gateway verb has
+   no radio and would need its own name.
+
+Keeping management on mesh-gw dissolves all four: its dashboard never had a radio
+prerequisite, never runs its transport through the radio it is flashing, has exactly one
+adapter, and already lives at the gateway's own address.
+
+---
+
+## WHAT THE TIDY-UP DOES TO THE BYTES
+
+If the split is by scope, **most of the 1.35 MB is in the pages that leave.** Against the
+measured frame:
+
+| page | bytes | share | under the split |
+|---|---|---|---|
+| `messages` | 474,326 | 35% | **goes** — this app is the messaging client |
+| `radios:<addr>` ×2 | 645,046 | 48% | **mostly goes.** 265,669 B of one is a chart series (1,349 points thinned from 5,394 samples); history is node-dash's, config is this app's |
+| `traceroute` | 135,601 | 10% | **goes** — this app has traceroute |
+| config schema | 80,900 | 6% | **goes** — this app has the settings pages |
+| BLE, firmware | the remainder | — | **stays** |
+
+So the honest close for the register entry
+`the-dashboard-pushes-the-entire-ui-to-every-browser-every-two-seconds` may be **"the
+payload left"** rather than a per-subscriber mechanism — the defect was ~74% historical
+data, and history is exactly what moves out. **That has to be re-measured after the split,
+not assumed**: the entry closes on a number or it does not close.
+
+Keep `on_request` regardless. It is already landed, it costs nothing, and a two-page
+dashboard that answers "which page are you on" is still better than one that does not.
 
 ---
 
@@ -214,7 +321,14 @@ action" repeats it for a third time.
 5. **What happens to the eleven other dashboard pages?** This note covers the three Peter
    named. `messages`, `traceroute`, `config`, `nodes`, `position`, `pki`, `aim`, `packets`,
    `storeward` and the per-radio pages are not accounted for anywhere, and some have no
-   equivalent in this client at all.
+   equivalent in this client at all. **Under the stays-on-mesh-gw option this becomes the
+   main question**, because it is the split line: everything that is not gateway-scoped has
+   to land somewhere, and `aim`, `pki`, `packets` and `storeward` have no home in a
+   Meshtastic client.
+
+6. **Does `_ble_scan` get lifted into core?** Independent of where the UI lives. It is the
+   one piece of this capability that is not in core, and it is the one with a contention
+   rule and a silent-discard behaviour worth testing without an HTTP server.
 
 ---
 
