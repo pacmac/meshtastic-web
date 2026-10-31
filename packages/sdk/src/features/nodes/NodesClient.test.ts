@@ -99,6 +99,103 @@ describe("NodesClient", () => {
     expect(client.nodes.byNum(8)?.heardOnCurrentLora).toBe(true);
   });
 
+  it("treats every node as heard when 2.8.1 never populates the field", () => {
+    // MEASURED on a RAK4631 running 2.8.1.c3df491: heard_on_current_lora is
+    // absent from all 96 NodeInfo frames it sends. The version check this
+    // replaces trusted the field here and dimmed the entire node list.
+    const { transport } = createFakeTransport();
+    const client = new MeshClient({ transport });
+    withFirmware(client, "2.8.1.c3df491");
+    for (const num of [8, 9, 10]) {
+      client.events.onNodeInfoPacket.dispatch(
+        create(Protobuf.Mesh.NodeInfoSchema, { num }),
+      );
+    }
+    for (const num of [8, 9, 10]) {
+      expect(client.nodes.byNum(num)?.heardOnCurrentLora).toBe(true);
+    }
+  });
+
+  it("reports unheard nodes without being told the firmware version", () => {
+    // The radio answering `true` once is the whole capability check, so this
+    // works with no DeviceMetadata at all.
+    const { transport } = createFakeTransport();
+    const client = new MeshClient({ transport });
+    client.events.onNodeInfoPacket.dispatch(
+      create(Protobuf.Mesh.NodeInfoSchema, {
+        num: 9,
+        heardOnCurrentLora: true,
+      }),
+    );
+    client.events.onNodeInfoPacket.dispatch(
+      create(Protobuf.Mesh.NodeInfoSchema, { num: 8 }),
+    );
+    expect(client.nodes.byNum(9)?.heardOnCurrentLora).toBe(true);
+    expect(client.nodes.byNum(8)?.heardOnCurrentLora).toBe(false);
+  });
+
+  it("re-reads nodes that arrived before the radio first answered", () => {
+    // The first `true` can land anywhere in the handshake dump. Nodes stored
+    // while the question was unanswered were given the benefit of the doubt,
+    // and that has to be taken back once the radio proves it answers.
+    const { transport } = createFakeTransport();
+    const client = new MeshClient({ transport });
+    client.events.onNodeInfoPacket.dispatch(
+      create(Protobuf.Mesh.NodeInfoSchema, { num: 8 }),
+    );
+    expect(client.nodes.byNum(8)?.heardOnCurrentLora).toBe(true);
+
+    client.events.onNodeInfoPacket.dispatch(
+      create(Protobuf.Mesh.NodeInfoSchema, {
+        num: 9,
+        heardOnCurrentLora: true,
+      }),
+    );
+    expect(client.nodes.byNum(8)?.heardOnCurrentLora).toBe(false);
+    expect(client.nodes.byNum(9)?.heardOnCurrentLora).toBe(true);
+  });
+
+  it("does not mark a node seeded without a NodeInfo as unheard", () => {
+    // A stray UserPacket seeds a stub Node. The radio has said nothing about
+    // that node's heard state, so the sweep must leave it alone.
+    const { transport } = createFakeTransport();
+    const client = new MeshClient({ transport });
+    client.events.onUserPacket.dispatch({
+      id: 0,
+      from: 7,
+      to: 0,
+      type: "broadcast",
+      channel: ChannelNumber.Primary,
+      rxTime: new Date(),
+      data: create(Protobuf.Mesh.UserSchema, { longName: "stub" }),
+    });
+    client.events.onNodeInfoPacket.dispatch(
+      create(Protobuf.Mesh.NodeInfoSchema, {
+        num: 9,
+        heardOnCurrentLora: true,
+      }),
+    );
+    expect(client.nodes.byNum(7)?.heardOnCurrentLora).toBeUndefined();
+  });
+
+  it("forgets the capability answer when rescoped to another radio", () => {
+    // Otherwise the next radio's first NodeInfo is read against the previous
+    // radio's capability and its whole list dims.
+    const { transport } = createFakeTransport();
+    const client = new MeshClient({ transport });
+    client.events.onNodeInfoPacket.dispatch(
+      create(Protobuf.Mesh.NodeInfoSchema, {
+        num: 9,
+        heardOnCurrentLora: true,
+      }),
+    );
+    client.nodes.rescope(2);
+    client.events.onNodeInfoPacket.dispatch(
+      create(Protobuf.Mesh.NodeInfoSchema, { num: 8 }),
+    );
+    expect(client.nodes.byNum(8)?.heardOnCurrentLora).toBe(true);
+  });
+
   it("reports unheard nodes on firmware 2.8.1", () => {
     const { transport } = createFakeTransport();
     const client = new MeshClient({ transport });
