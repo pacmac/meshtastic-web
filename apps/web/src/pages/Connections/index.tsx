@@ -52,6 +52,19 @@ import {
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+/* WHERE "INTO THE APP" IS, named once.
+ *
+ * This page navigated to "/" in five places — the back arrow, and after each of the four
+ * ways a connection can succeed — because "/" used to redirect straight to the messages
+ * view. Once that redirect was removed so that "/" could render THIS page, all five
+ * pointed at the page they were already on: connecting a radio appeared to do nothing,
+ * and the back arrow was a dead end.
+ *
+ * So the destination is stated rather than implied. A literal repeated five times is how
+ * the next person changes four of them.
+ */
+const APP_HOME = "/messages/broadcast/0";
+
 export const Connections = () => {
   const {
     connections,
@@ -100,7 +113,7 @@ export const Connections = () => {
         <div className="flex items-stretch gap-3">
           <button
             type="button"
-            onClick={() => navigate({ to: "/" })}
+            onClick={() => navigate({ to: APP_HOME })}
             className="flex items-center justify-center w-9 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
             aria-label="Go back"
           >
@@ -153,7 +166,7 @@ export const Connections = () => {
                 const ok = await connect(c.id, { allowPrompt: true });
                 // Success needs no toast: the connecting overlay shows it.
                 if (ok) {
-                  navigate({ to: "/" });
+                  navigate({ to: APP_HOME });
                 } else {
                   toast({
                     title: t("toasts.failed"),
@@ -196,7 +209,7 @@ export const Connections = () => {
                 const ok = await connect(c.id, { allowPrompt: true });
                 // Success needs no toast: the connecting overlay shows it.
                 if (ok) {
-                  navigate({ to: "/" });
+                  navigate({ to: APP_HOME });
                 } else {
                   toast({
                     title: t("toasts.failed"),
@@ -228,7 +241,7 @@ export const Connections = () => {
               created.status === "connected" ||
               created.status === "configured"
             ) {
-              navigate({ to: "/" });
+              navigate({ to: APP_HOME });
             }
           } else {
             toast({
