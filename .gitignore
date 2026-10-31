@@ -22,6 +22,23 @@ packages/protobufs/packages/ts/dist
 # Claude Code session locks
 .claude/
 
-# The pinned Buf CLI, fetched by deploy.sh. A 60 MB binary does not belong in git,
-# and the version it must be is in deploy.sh, which does belong here.
+# The pinned Buf CLI, fetched by deploy.sh. A 60 MB binary does not belong in git.
 .tools/
+
+# LOCAL DEPLOYMENT TOOLING, ignored rather than committed, and the reason is not that it
+# is scratch work.
+#
+# All three were written against ONE host and two named radios — a hardcoded nginx
+# container, a hardcoded gateway address, hardcoded LAN ranges, a hardcoded domain and
+# two hardcoded radio names. That is no use to anyone else forking this, and it is also
+# why they cannot be published: this fork's origin is PUBLIC, and those files are a
+# description of a private network.
+#
+# What they should be is a generator: ask what it cannot work out, derive the rest (the
+# gateway already answers GET /devices with every radio it holds and its alias, so the
+# hostnames follow from the gateway rather than from a list someone typed), and emit a
+# recommended config. Until they are that, they stay on the machine they were written
+# for. Not urgent — Peter, 2026-10-31.
+deploy.sh
+check.sh
+nginx/
