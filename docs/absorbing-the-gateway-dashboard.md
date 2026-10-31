@@ -14,6 +14,10 @@ This note is the design surface for that. It is a **spec, not a plan of work** �
 it has been built. Every number and route in it was read off the running gateway or its
 source on 2026-10-31; where something is unverified it says so.
 
+**Hostnames and addresses here are placeholders** — `radio-a.example.net`,
+`radio-b.example.net`, `nginx-host`, `gateway.example.net`. This fork's origin is public;
+the real values live on the machine. See `HANDOVER.md`.
+
 > ## THE LEADING OPTION IS NOW: MANAGEMENT STAYS ON mesh-gw
 >
 > **Not decided — Peter said "maybe" — but it is the leading option and it has one
@@ -163,7 +167,7 @@ verified in the source:
    entire application only when `getDevice(selectedDeviceId)` is truthy; otherwise it
    renders `<Connections />` and nothing else. Management inside that gate means **you can
    never add your first radio and never recover your last one**.
-2. **Flashing destroys its own transport.** Flash OMNI through `uk-omni.peter-c.net` and the
+2. **Flashing destroys its own transport.** Flash OMNI through `radio-a.example.net` and the
    radio reboots — the `/api/v1` queue goes with it, and from the UI that is
    indistinguishable from a failure. This matters more than usual given the standing rule
    never to interrupt a live OTA: a progress bar that goes red mid-flash *invites* a retry.
@@ -244,7 +248,7 @@ counts. **The UI should show both**, or it recreates the ambiguity that had Pete
 `:8089`**, and that server does an `index.html` fallback for any unknown path, because `dist`
 is path-routed.
 
-So a fetch to `/ble/scan` or `/ota` through `uk-omni.peter-c.net` returns **the client's own
+So a fetch to `/ble/scan` or `/ota` through `radio-a.example.net` returns **the client's own
 HTML with HTTP 200**. Not a 404 — a 200 with the wrong body, which `response.json()` turns
 into a parse error that names nothing.
 
@@ -253,13 +257,13 @@ mesh-gw: *"GET /device-config/{mac} now returns your SPA HTML with a 200, and ou
 PIN came from it"*. Do not rediscover it.
 
 The fix is a vhost change — and `nginx/mesh.conf` is **gitignored** and lives only on this
-disk and on `nginx.ellis`, so it is also the least discoverable file in the system. See
+disk and on `nginx-host`, so it is also the least discoverable file in the system. See
 `HANDOVER.md`.
 
 **Open question, for Peter:** should the gateway's management routes be reachable from the
 radio hostnames at all? `uk-omni` / `uk-yagi` currently mean "this radio", and `Host` is what
 mesh-gw uses to pick one. Scan, pair and firmware are gateway-level, not radio-level, so a
-third name (`mesh-gw.peter-c.net`, say) may be the honest mapping rather than bolting
+third name (`gateway.example.net`, say) may be the honest mapping rather than bolting
 gateway verbs onto a radio's name.
 
 ### 2. The no-GET-polling rule and this app's transport are in direct conflict
