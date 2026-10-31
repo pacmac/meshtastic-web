@@ -56,7 +56,10 @@ export function useConnections() {
   const setActiveConnectionId = useDeviceStore((s) => s.setActiveConnectionId);
   const { addDevice } = useDeviceStore();
   const { setSelectedDevice } = useAppStore();
-  const selectedDeviceId = useAppStore((s) => s.selectedDeviceId);
+  // `selectedDeviceId` was read here solely so syncConnectionStatuses could demote every
+  // connection except the selected one. That is what made the app single-radio, so the
+  // read goes with it — which radio is being VIEWED is no longer any of this function's
+  // business.
   // Set below once connect() exists; used by setupMeshDevice to retry.
   const retryHandshakeRef = useRef<
     ((id: ConnectionId, delayMs: number) => Promise<void>) | undefined
@@ -483,20 +486,37 @@ export function useConnections() {
   }, [connections, updateSavedConnection]);
 
   const syncConnectionStatuses = useCallback(() => {
-    const activeConnection = connections.find(
-      (c) => c.meshDeviceId === selectedDeviceId,
-    );
+    // STALE LABELS ARE CLEARED BY ASKING THE REGISTRY, NOT BY ASSUMING ONE RADIO.
+    //
+    // This runs once, when the Connections page mounts, to clear "connected" labels left
+    // behind by a previous page load — a status is persisted but a transport is not, so a
+    // reload would otherwise show a radio as connected when nothing is open.
+    //
+    // IT USED TO DEMOTE EVERY CONNECTION BUT THE SELECTED ONE, which made the app
+    // single-radio by accident: nothing in `connect()` tears down another connection, and
+    // MeshRegistry "holds one MeshClient per active connection", so several really are
+    // live — this function was simply relabelling all but one of them as disconnected.
+    //
+    // So the question asked is now the right one: does the registry still hold a client
+    // for this connection? If it does, the connection is real whether or not it is the
+    // one being VIEWED, and only genuinely dead ones are demoted.
     connections.forEach((conn) => {
-      const shouldBeConnected = activeConnection?.id === conn.id;
       const isConnectedState =
         conn.status === "connected" ||
         conn.status === "configured" ||
         conn.status === "configuring";
-      if (!shouldBeConnected && isConnectedState) {
+      if (!isConnectedState) {
+        return;
+      }
+      // `has`, not `get() !== undefined` — the registry exports both, and asking the
+      // question the method is named after is cheaper to read and cannot be got subtly
+      // wrong. MeshRegistry keeps `private readonly clients = new Map<ConnectionId,
+      // MeshClient>()`, which is the proof that several connections coexist.
+      if (!meshRegistry.has(conn.id)) {
         updateSavedConnection(conn.id, { status: "disconnected" });
       }
     });
-  }, [connections, selectedDeviceId, updateSavedConnection]);
+  }, [connections, updateSavedConnection]);
 
   return {
     connections,

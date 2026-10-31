@@ -1,4 +1,5 @@
 import { useFirstSavedConnection } from "@app/core/stores/deviceStore/selectors.ts";
+import { ConnectedDevices } from "./ConnectedDevices.tsx";
 import { SidebarButton } from "@components/UI/Sidebar/SidebarButton.tsx";
 import { SidebarSection } from "@components/UI/Sidebar/SidebarSection.tsx";
 import { Spinner } from "@components/UI/Spinner.tsx";
@@ -218,24 +219,29 @@ export const Sidebar = ({ children }: SidebarProps) => {
             </Subtle>
           </div>
         ) : (
-          <DeviceInfoPanel
-            isCollapsed={isCollapsed}
-            setCommandPaletteOpen={() => setCommandPaletteOpen(true)}
-            setDialogOpen={() => setDialogOpen("deviceName", true)}
-            user={myNode.user}
-            firmwareVersion={
-              myMetadata?.firmwareVersion ?? t("unknown.notAvailable")
-            }
-            deviceMetrics={{
-              batteryLevel: myNode.deviceMetrics?.batteryLevel,
-              voltage:
-                typeof myNode.deviceMetrics?.voltage === "number"
-                  ? Math.abs(myNode.deviceMetrics?.voltage)
-                  : undefined,
-            }}
-            connectionStatus={activeConnection?.status}
-            connectionName={activeConnection?.name}
-          />
+          <>
+            {/* EVERY LIVE RADIO, above the panel for the active one. Renders nothing when
+              there is only one connection — see ConnectedDevices.tsx. */}
+            <ConnectedDevices isCollapsed={isCollapsed} />
+            <DeviceInfoPanel
+              isCollapsed={isCollapsed}
+              setCommandPaletteOpen={() => setCommandPaletteOpen(true)}
+              setDialogOpen={() => setDialogOpen("deviceName", true)}
+              user={myNode.user}
+              firmwareVersion={
+                myMetadata?.firmwareVersion ?? t("unknown.notAvailable")
+              }
+              deviceMetrics={{
+                batteryLevel: myNode.deviceMetrics?.batteryLevel,
+                voltage:
+                  typeof myNode.deviceMetrics?.voltage === "number"
+                    ? Math.abs(myNode.deviceMetrics?.voltage)
+                    : undefined,
+              }}
+              connectionStatus={activeConnection?.status}
+              connectionName={activeConnection?.name}
+            />
+          </>
         )}
       </div>
     </div>
