@@ -30,10 +30,23 @@ const indexRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/",
   component: Connections,
-  loader: () => {
-    // Redirect to the broadcast messages page on initial load
-    return redirect({ to: "/messages/broadcast/0", replace: true });
-  },
+  /* "/" RENDERS CONNECTIONS. NO REDIRECT.
+   *
+   * This route has always declared `component: Connections` and then thrown it away in
+   * a loader that redirected to /messages/broadcast/0 unconditionally, so the page it
+   * names could never be reached from "/". After a reload the transport is gone — a
+   * page load cannot keep a socket — so the redirect landed on an empty Messages view
+   * every time, with no hint of what was wrong and no link back; the Connections page
+   * was reachable only by already knowing its URL.
+   *
+   * I FIRST MADE THE REDIRECT CONDITIONAL on having no saved connections, which fixed
+   * the first visit and nothing else: a returning user HAS saved connections, which is
+   * precisely when the redirect fires and precisely the case that was reported. The
+   * condition was answering a question nobody asked.
+   *
+   * So the loader goes. The root of an app whose radios are not connected yet is the
+   * page that connects them, and Messages is one nav click away.
+   */
 });
 
 const messagesRoute = createRoute({
