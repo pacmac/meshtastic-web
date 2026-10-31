@@ -16,6 +16,7 @@
   "lastConnectedAt": "Last connected: {{date}}",
   "neverConnected": "Never connected",
   "default": "Default",
+  "autoConnect": "Auto",
   "button": {
     "addConnection": "Add Connection",
     "connect": "Connect",
@@ -26,7 +27,9 @@
     "setDefault": "Set as default",
     "unsetDefault": "Unset default",
     "rename": "Rename",
-    "edit": "Edit"
+    "edit": "Edit",
+    "setAutoConnect": "Connect automatically on load",
+    "unsetAutoConnect": "Do not connect automatically"
   },
   "renameConnection": "Rename connection",
   "renameDescription": "Enter a new name for this connection.",

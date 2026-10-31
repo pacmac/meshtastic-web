@@ -8,6 +8,7 @@ import { RegionSetupReminder } from "@components/RegionSetupReminder.tsx";
 import { Toaster } from "@components/Toaster.tsx";
 import { ErrorPage } from "@components/UI/ErrorPage.tsx";
 import Footer from "@components/UI/Footer.tsx";
+import { useAutoConnect } from "@core/hooks/useAutoConnect.ts";
 import { useTheme } from "@core/hooks/useTheme.ts";
 import { cn } from "@core/utils/cn.ts";
 import { SidebarProvider, useAppStore, useDeviceStore } from "@core/stores";
@@ -35,6 +36,9 @@ function useUnreadTitleIndicator() {
 export function App() {
   useTheme();
   useUnreadTitleIndicator();
+  // Here rather than on the Connections page: that page is unmounted as soon as a
+  // device exists, so a reload of /messages/broadcast/0 would never reach it.
+  useAutoConnect();
 
   const { getDevice } = useDeviceStore();
   const { selectedDeviceId } = useAppStore();

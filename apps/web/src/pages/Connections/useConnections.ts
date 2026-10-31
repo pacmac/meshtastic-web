@@ -76,7 +76,20 @@ export function useConnections() {
         status,
         error: error || undefined,
         errorKind: error ? errorKind : undefined,
-        ...(status === "disconnected" ? { lastConnectedAt: Date.now() } : {}),
+        // A RADIO ANSWERED — the only event worth stamping, and the only one the
+        // card's "Last connected" string can honestly describe.
+        //
+        // This used to be written on the `disconnected` branch instead, which was
+        // wrong twice over. It recorded a DISCONNECT under the name
+        // `lastConnectedAt`; and on HTTP it recorded nothing at all, because the
+        // only caller that reaches `disconnected` through here is the BLE
+        // gattserverdisconnected listener — the user-facing `disconnect()` assigns
+        // the status itself, and so does `onRehydrateStorage` when it demotes a
+        // persisted in-flight status. So a radio could be connected for an hour and
+        // its card still read "Never connected".
+        ...(status === "connected" || status === "configured"
+          ? { lastConnectedAt: Date.now() }
+          : {}),
       });
     },
     [updateSavedConnection],
@@ -146,6 +159,23 @@ export function useConnections() {
       updateSavedConnection(id, { isDefault: !conn.isDefault });
     },
     [connections, updateSavedConnection],
+  );
+
+  // Toggle whether this connection opens itself on load. The flag is read by
+  // `useAutoConnect`, which runs once per page load; flipping it here has no
+  // effect on the current session beyond what the badge shows.
+  const setAutoConnect = useCallback(
+    (id: ConnectionId) => {
+      // From the live store, not the memoized `connections` closure — the same
+      // reason connect() gives: a caller can add a connection and act on it in
+      // the same tick, before this hook has re-rendered.
+      const conn = useDeviceStore
+        .getState()
+        .savedConnections.find((c) => c.id === id);
+      if (!conn) return;
+      updateSavedConnection(id, { autoConnect: !conn.autoConnect });
+    },
+    [updateSavedConnection],
   );
 
   const setupMeshDevice = useCallback(
@@ -526,6 +556,7 @@ export function useConnections() {
     disconnect,
     removeConnection,
     setDefaultConnection,
+    setAutoConnect,
     refreshStatuses,
     syncConnectionStatuses,
   };
