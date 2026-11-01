@@ -1,0 +1,10 @@
+$ pnpm --dir apps/web exec vitest run src/pages/Nodes
+
+ RUN  v5.0.4 /usr/share/pac/dev/projects/mt-radar/meshtastic-web/apps/web
+
+
+ Test Files  3 passed (3)
+      Tests  19 passed (19)
+   Start at  01:08:28
+   Duration  2.40s (environment 43%, setup 30%, transform 12%, import 9%, tests 6%, worker 1%)
+

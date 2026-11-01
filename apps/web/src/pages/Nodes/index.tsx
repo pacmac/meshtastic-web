@@ -20,13 +20,13 @@ import { PageLayout } from "@components/PageLayout.tsx";
 import { Sidebar } from "@components/Sidebar.tsx";
 import { Avatar } from "@components/UI/Avatar.tsx";
 import { Input } from "@components/UI/Input.tsx";
+import { ToggleGroup, ToggleGroupItem } from "@components/UI/ToggleGroup.tsx";
 import useLang from "@core/hooks/useLang.ts";
 import { useNodesAsProto } from "@core/hooks/useNodesAsProto.ts";
 import { useAppStore, useDevice } from "@core/stores";
 import { Protobuf, type Types } from "@meshtastic/sdk";
 import { useNodeErrors } from "@meshtastic/sdk-react";
-import { numberToHexUnpadded } from "@noble/curves/utils.js";
-import { LockIcon, LockOpenIcon } from "lucide-react";
+import { LayoutGridIcon, ListIcon, LockIcon, LockOpenIcon } from "lucide-react";
 import {
   type JSX,
   useCallback,
@@ -37,6 +37,9 @@ import {
 } from "react";
 import { useTranslation } from "react-i18next";
 import { base16 } from "rfc4648";
+import { NodeCards } from "./NodeCards.tsx";
+import { connectionLabel, nodeNames, snrInfo } from "./nodeDisplay.ts";
+import { useNodesView } from "./useNodesView.ts";
 
 export interface DeleteNoteDialogProps {
   open: boolean;
@@ -62,6 +65,7 @@ const NodesPage = (): JSX.Element => {
     () => defaultFilterValues,
   );
   const deferredFilterState = useDeferredValue(filterState);
+  const [view, setView] = useNodesView();
 
   // stable predicate so the selector identity doesn’t thrash
   const predicate = useCallback(
@@ -145,25 +149,8 @@ const NodesPage = (): JSX.Element => {
         .match(/.{1,2}/g)
         ?.join(":") ?? t("unknown.shortName");
 
-    const shortName =
-      node.user?.shortName ??
-      numberToHexUnpadded(node.num).slice(-4).toUpperCase();
-    const longName =
-      node.user?.longName ??
-      t("fallbackName", {
-        last4: shortName,
-      });
-
-    // SNR is reported in dB. Map it to a 0–100% signal-quality heuristic
-    // (-10 dB → 0%, +10 dB → 100%) for an at-a-glance read, and pick a tone.
-    const snr = node.snr ?? 0;
-    const snrQuality = Math.min(Math.max(Math.round((snr + 10) * 5), 0), 100);
-    const snrTone =
-      snrQuality >= 67
-        ? "text-green-500"
-        : snrQuality >= 34
-          ? "text-yellow-500"
-          : "text-red-500";
+    const { shortName, longName } = nodeNames(node, t);
+    const { snr, quality: snrQuality, tone: snrTone } = snrInfo(node);
 
     return {
       id: node.num,
@@ -213,22 +200,7 @@ const NodesPage = (): JSX.Element => {
           sortValue: longName,
         },
         {
-          content: (
-            <Mono className="w-16">
-              {node.hopsAway !== undefined
-                ? node?.viaMqtt === false && node.hopsAway === 0
-                  ? t("nodesTable.connectionStatus.direct")
-                  : `${node.hopsAway?.toString()} ${
-                      (node.hopsAway ?? 0) > 1
-                        ? t("unit.hop.plural")
-                        : t("unit.hop.one")
-                    } ${t("nodesTable.connectionStatus.away")}`
-                : t("unknown.longName")}
-              {node?.viaMqtt === true
-                ? t("nodesTable.connectionStatus.viaMqtt")
-                : ""}
-            </Mono>
-          ),
+          content: <Mono className="w-16">{connectionLabel(node, t)}</Mono>,
           sortValue: node.hopsAway ?? Number.MAX_SAFE_INTEGER,
         },
         {
@@ -306,6 +278,35 @@ const NodesPage = (): JSX.Element => {
         <div className="flex items-center pr-2 text-sm text-slate-500 dark:text-slate-400 tabular-nums">
           {filteredNodes.length}/{allSdkNodes.length}
         </div>
+        <ToggleGroup
+          type="single"
+          value={view}
+          onValueChange={(next) => {
+            // Radix reports "" when the active item is pressed again; keep it.
+            if (next === "list" || next === "cards") {
+              setView(next);
+            }
+          }}
+          aria-label={t("view.label")}
+          className="mr-2 self-center"
+        >
+          <ToggleGroupItem
+            value="list"
+            aria-label={t("view.list")}
+            title={t("view.list")}
+            className="h-8 px-2"
+          >
+            <ListIcon size={16} aria-hidden="true" />
+          </ToggleGroupItem>
+          <ToggleGroupItem
+            value="cards"
+            aria-label={t("view.cards")}
+            title={t("view.cards")}
+            className="h-8 px-2"
+          >
+            <LayoutGridIcon size={16} aria-hidden="true" />
+          </ToggleGroupItem>
+        </ToggleGroup>
         <div className="flex justify-end">
           <FilterControl
             filterState={filterState}
@@ -325,7 +326,16 @@ const NodesPage = (): JSX.Element => {
         </div>
       </div>
       <div className="overflow-y-auto">
-        <Table headings={tableHeadings} rows={tableRows} />
+        {view === "cards" ? (
+          <NodeCards
+            nodes={filteredNodes}
+            hasNodeError={hasNodeError}
+            onOpen={handleNodeInfoDialog}
+            locale={current?.code}
+          />
+        ) : (
+          <Table headings={tableHeadings} rows={tableRows} />
+        )}
         <TracerouteResponseDialog
           traceroute={selectedTraceroute}
           open={!!selectedTraceroute}

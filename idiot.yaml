@@ -1,0 +1,50 @@
+# Every accusation this repo is under, and what trying it proved.
+# Written only by ~/.claude/hooks/idiot.py. Verdicts are derived, never typed.
+- id: the-nodes-page-cannot-show-nodes-as-cards
+  type: new
+  what: the Nodes page only offers a table; add a remembered List/Cards toggle and a card view
+  spec: docs/nodes-cards-view.md
+  files:
+  - apps/web/src/pages/Nodes/nodeDisplay.ts
+  - apps/web/src/pages/Nodes/useNodesView.ts
+  - apps/web/src/pages/Nodes/NodeCards.tsx
+  - apps/web/src/pages/Nodes/index.tsx
+  - apps/web/public/i18n/locales/en/nodes.json
+  test:
+    command:
+    - pnpm
+    - --dir
+    - apps/web
+    - exec
+    - vitest
+    - run
+    - src/pages/Nodes
+    criterion: all three test files in apps/web/src/pages/Nodes pass
+    runs: 1
+  trial:
+    file: .proofs/the-nodes-page-cannot-show-nodes-as-cards.trial.txt
+    exit: 1
+    runs: 1
+    failures: 1
+    at: '2026-11-01T01:06:19.015'
+    commit: b4d7304c-dirty
+  fix:
+    file: .proofs/the-nodes-page-cannot-show-nodes-as-cards.fix.txt
+    exit: 0
+    runs: 1
+    failures: 0
+    at: '2026-11-01T01:08:31.149'
+    commit: b4d7304c-dirty
+- id: the-table-default-sort-is-an-english-literal
+  type: bug
+  what: Table sorts by the English heading text, so outside English the default sort matches no column
+    and rows come out unsorted
+  spec: docs/nodes-cards-view.md
+  files:
+  - apps/web/src/components/generic/Table/index.tsx
+  test:
+    command: null
+    criterion: with a non-English heading set, Table still sorts by last heard on first render
+    runs: 1
+  trial: null
+  fix: null

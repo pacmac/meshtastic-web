@@ -75,5 +75,18 @@
     "statusMessage": {
       "label": "Status message"
     }
+  },
+  "view": {
+    "label": "Layout",
+    "list": "List",
+    "cards": "Cards"
+  },
+  "sort": {
+    "label": "Sort by",
+    "lastHeard": "Last heard",
+    "name": "Name",
+    "connection": "Connection",
+    "snr": "Signal (SNR)",
+    "model": "Model"
   }
 }
