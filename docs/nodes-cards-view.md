@@ -71,6 +71,31 @@ both views call it. This is the only change to the existing row building.
 Sort keys, matching the table's columns: **Last heard** (default, newest first), **Name**,
 **Connection** (hops, direct first), **SNR**, **Model**. Favourites first, always.
 
+## Density (added after the first deploy)
+
+**This supersedes the card diagram and the "grid-cols-1 / sm:2 / xl:3" line above.** Those
+describe the first, roomy layout. The current layout is the one in this section.
+
+Peter, 2026-11-01, on seeing it live: *"those cards are huge and much too big to display
+the content they hold. 80% whitespace."* He was right. Rendered in Chrome the cards were
+376 x 146 px holding four short lines, with half of the name row empty and every row on its
+own padded line.
+
+Compact layout: the avatar sits left across the card; beside it, three rows only: the name
+with trust icons and the encryption lock on the right; one meta row (hops, last heard); one
+signal row (SNR, model). The status message, when a node has one, is a fourth row. The grid
+is `repeat(auto-fill, minmax(16rem, 1fr))` so a wide page gets more columns instead of
+wider cards.
+
+Measured, in a real browser, in both themes at 1440 and 1024 wide
+(`scratchpad/harness/check-compact.mjs`, exit 1 when any card is taller than the limit).
+The limit is derived: name row 20 px + two small rows 16 px each = 52, + status row 16,
++ padding 2 x 8 = 16, + border 2 = **86, rounded to 88 px**. Before: **146 px**.
+
+The harness renders the real `NodeCards` with nine sample nodes through the app's own
+Vite config aliases and i18n. It lives in the scratchpad and **will not survive**; the
+unit tests in `NodeCards.test.tsx` keep covering behaviour, not size.
+
 ## Tests, and what the red is
 
 The red is: the files do not exist, so each test file fails to import. That is a legitimate
@@ -117,7 +142,7 @@ source_hash (sha256, 2026-11-01, after the tests passed 19/19):
 ```
 f7a8a410463a92548630be9f596cd2b3461a3869b38608cdf4cb0da25315c443  pages/Nodes/nodeDisplay.ts
 b295c4f6b0596a4660edaf11010053497f9c1e8d10238849295ee1b3ad8890f7  pages/Nodes/useNodesView.ts
-fa7e0b4ab90fb043e608f110f6d983e2607a52f677e0e063ef2c5e608a05b7ee  pages/Nodes/NodeCards.tsx
+b6eb59b3c8116c8e7614e51545f778cea0d61f05633f6341e4a589f35683a358  pages/Nodes/NodeCards.tsx   (after the density change)
 14c760d450f6ef3776d3ed515be8884f67a0b2ced0ddc2a9e7021827cc99250b  pages/Nodes/index.tsx
 2c70e07e2f46f411d96f2798ac30d0ad9994313fbe1ebcdfee8eeb72795271f9  public/i18n/locales/en/nodes.json
 ```
