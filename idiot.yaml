@@ -48,3 +48,29 @@
     runs: 1
   trial: null
   fix: null
+- id: the-node-cards-are-twice-as-tall-as-their-content
+  type: bug
+  what: Each node card is 146px tall for about 52px of text; make them compact
+  spec: docs/nodes-cards-view.md
+  files:
+  - apps/web/src/pages/Nodes/NodeCards.tsx
+  test:
+    command:
+    - node
+    - /tmp/claude-0/-usr-share-pac-dev-projects-mt-radar-meshtastic-web/b2765faf-4f7e-46a3-96d9-dd1a971f585d/scratchpad/harness/check-compact.mjs
+    criterion: no card taller than 88px in light or dark at 1440 and 1024 wide
+    runs: 1
+  trial:
+    file: .proofs/the-node-cards-are-twice-as-tall-as-their-content.trial.txt
+    exit: 1
+    runs: 1
+    failures: 1
+    at: '2026-11-01T01:21:28.377'
+    commit: 58e152f2-dirty
+  fix:
+    file: .proofs/the-node-cards-are-twice-as-tall-as-their-content.fix.txt
+    exit: 0
+    runs: 1
+    failures: 0
+    at: '2026-11-01T01:23:42.425'
+    commit: 58e152f2-dirty

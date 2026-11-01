@@ -1,0 +1,11 @@
+$ node /tmp/claude-0/-usr-share-pac-dev-projects-mt-radar-meshtastic-web/b2765faf-4f7e-46a3-96d9-dd1a971f585d/scratchpad/harness/check-compact.mjs
+┌─────────┬─────────┬───────┬───────┬─────────┬──────────┐
+│ (index) │ theme   │ width │ cards │ tallest │ shortest │
+├─────────┼─────────┼───────┼───────┼─────────┼──────────┤
+│ 0       │ 'light' │ 1440  │ 9     │ 146     │ 146      │
+│ 1       │ 'light' │ 1024  │ 9     │ 146     │ 146      │
+│ 2       │ 'dark'  │ 1440  │ 9     │ 146     │ 146      │
+│ 3       │ 'dark'  │ 1024  │ 9     │ 146     │ 146      │
+└─────────┴─────────┴───────┴───────┴─────────┴──────────┘
+tallest card 146px, limit 88px
+FAIL: cards are taller than their content needs

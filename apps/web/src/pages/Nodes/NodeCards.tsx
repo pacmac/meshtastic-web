@@ -92,7 +92,8 @@ export const NodeCards = ({
           ))}
         </select>
       </div>
-      <ul className="grid grid-cols-1 gap-2 p-2 sm:grid-cols-2 xl:grid-cols-3">
+      {/* More columns on a wide page, never wider cards. */}
+      <ul className="grid grid-cols-[repeat(auto-fill,minmax(16rem,1fr))] gap-2 p-2">
         {sorted.map((node) => {
           const { shortName, longName } = nodeNames(node, t);
           const { snr, quality, tone } = snrInfo(node);
@@ -104,80 +105,82 @@ export const NodeCards = ({
             >
               <Card
                 className={cn(
-                  "flex h-full flex-col gap-2 p-3",
+                  "flex h-full items-start gap-2 p-2",
                   node.isFavorite && "bg-yellow-100/30 dark:bg-slate-800",
                 )}
                 data-short-name={shortName}
               >
-                <div className="flex items-start gap-2">
-                  <Avatar
-                    nodeNum={node.num}
-                    showFavorite={node.isFavorite}
-                    showError={hasNodeError(node.num)}
-                  />
-                  <div className="flex min-w-0 flex-col">
-                    <div className="flex items-center gap-1.5">
-                      <button
-                        type="button"
-                        onClick={() => onOpen(node.num)}
-                        className="cursor-pointer text-left underline whitespace-break-spaces"
-                      >
-                        {longName}
-                      </button>
-                      <NodeTrustIndicators node={node} />
-                    </div>
-                    {node.status && (
-                      <span
-                        className="truncate text-xs text-slate-500 dark:text-slate-400"
-                        title={node.status}
-                      >
-                        <span className="sr-only">
-                          {t("trust.statusMessage.label")}:{" "}
-                        </span>
-                        {node.status}
+                <Avatar
+                  nodeNum={node.num}
+                  showFavorite={node.isFavorite}
+                  showError={hasNodeError(node.num)}
+                />
+                <div className="flex min-w-0 flex-1 flex-col">
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => onOpen(node.num)}
+                      title={longName}
+                      className="max-w-full min-w-0 cursor-pointer truncate text-left text-sm font-medium underline"
+                    >
+                      {longName}
+                    </button>
+                    <NodeTrustIndicators node={node} />
+                    <span className="ml-auto shrink-0">
+                      {hasKey ? (
+                        <LockIcon
+                          size={14}
+                          className="text-green-600"
+                          aria-label={t("nodesTable.headings.encryption")}
+                        />
+                      ) : (
+                        <LockOpenIcon
+                          size={14}
+                          className="text-yellow-300"
+                          aria-label={t("nodesTable.headings.encryption")}
+                        />
+                      )}
+                    </span>
+                  </div>
+                  {node.status && (
+                    <span
+                      className="truncate text-xs text-slate-500 dark:text-slate-400"
+                      title={node.status}
+                    >
+                      <span className="sr-only">
+                        {t("trust.statusMessage.label")}:{" "}
                       </span>
-                    )}
+                      {node.status}
+                    </span>
+                  )}
+                  {/* Wraps rather than truncating: "1 Hop away, via MQTT" must stay readable. */}
+                  <div className="flex flex-wrap items-baseline justify-between gap-x-2">
+                    <Mono className="text-xs">{connectionLabel(node, t)}</Mono>
+                    <Mono className="ml-auto text-xs">
+                      {node.lastHeard === 0 ? (
+                        t("unknown.longName")
+                      ) : (
+                        <TimeAgo
+                          timestamp={node.lastHeard * 1000}
+                          locale={locale}
+                        />
+                      )}
+                    </Mono>
+                  </div>
+                  <div className="flex items-baseline justify-between gap-2">
+                    <Mono className="flex items-baseline gap-1.5 text-xs">
+                      <span className={tone}>
+                        {Number(snr.toFixed(1))} {t("unit.db")}
+                      </span>
+                      <span className="text-gray-500 dark:text-gray-400/70">
+                        {quality}%
+                      </span>
+                    </Mono>
+                    <Mono className="truncate text-xs text-slate-500 dark:text-slate-400">
+                      {modelName(node)}
+                    </Mono>
                   </div>
                 </div>
-                <div className="flex items-baseline justify-between gap-2 text-sm text-text-secondary">
-                  <Mono>{connectionLabel(node, t)}</Mono>
-                  <Mono>
-                    {node.lastHeard === 0 ? (
-                      t("unknown.longName")
-                    ) : (
-                      <TimeAgo
-                        timestamp={node.lastHeard * 1000}
-                        locale={locale}
-                      />
-                    )}
-                  </Mono>
-                </div>
-                <div className="flex items-center justify-between gap-2 text-sm">
-                  <Mono className="flex items-baseline gap-1.5">
-                    <span className={tone}>
-                      {Number(snr.toFixed(1))} {t("unit.db")}
-                    </span>
-                    <span className="text-gray-500 dark:text-gray-400/70">
-                      {quality}%
-                    </span>
-                  </Mono>
-                  {hasKey ? (
-                    <LockIcon
-                      size={16}
-                      className="text-green-600"
-                      aria-label={t("nodesTable.headings.encryption")}
-                    />
-                  ) : (
-                    <LockOpenIcon
-                      size={16}
-                      className="text-yellow-300"
-                      aria-label={t("nodesTable.headings.encryption")}
-                    />
-                  )}
-                </div>
-                <Mono className="text-xs text-slate-500 dark:text-slate-400">
-                  {modelName(node)}
-                </Mono>
               </Card>
             </li>
           );
