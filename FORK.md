@@ -11,10 +11,15 @@ can never conflict on a rebase.
 ```
 main                        a MIRROR of upstream. NEVER COMMIT TO IT.
 ├── multi-connection-sidebar     one change
+├── fix-radio-switch             one change, cut from multi-connection-sidebar (not main)
 ├── root-renders-connections     one change
 ├── framed-batch-fetch           one change
+├── auto-connect                 one change
+├── heard-on-current-lora        one change
+├── nodes-cards-view             one change
+├── fix-typecheck                one change
 ├── fork-notes                   this file
-└── deploy                       the four merged — THIS IS WHAT IS SERVED
+└── deploy                       all of the above merged — THIS IS WHAT IS SERVED
 ```
 
 **The rule is `main`.** The moment anything is committed to `main`, it stops being a
@@ -32,7 +37,15 @@ gate, so a PR here is a click that tells nobody anything. PRs are for sending a 
 | `multi-connection-sidebar` | every live connection listed in the sidebar, not just the active one. The app was already multi-connection everywhere except the component that displayed it | **yes** — addresses their open issue #724 |
 | `root-renders-connections` | `/` renders the Connections page instead of redirecting past it, plus the five navigation sites that depended on that redirect | **yes** — the index route declared a component it could never reach |
 | `framed-batch-fetch` | a whole handshake in one response instead of one round trip per frame | **no** — needs a `framed=1` parameter only mesh-gw serves |
-| `fork-notes` | this file | no |
+| `fix-radio-switch` | switching radios moves the legacy device store too (`docs/switching-radios-moves-three-things.md`). **Cut from `multi-connection-sidebar`**, the one exception to the rule above, because it fixes a file that branch introduces | **yes**, squashed into `multi-connection-sidebar` first |
+| `auto-connect` | an Auto Connect flag on a saved connection, and the card stops saying "never connected" (`docs/auto-connect.md`) | undecided |
+| `heard-on-current-lora` | decide `heard_on_current_lora` from the radio's data instead of its version string (`docs/heard-on-current-lora.md`) | **yes** — the upstream issue is not yet opened |
+| `nodes-cards-view` | a remembered List/Cards toggle on the Nodes page (`docs/nodes-cards-view.md`); also carries this repo's `idiot.yaml` register | undecided |
+| `fix-typecheck` | `src/tests/setup.ts` imports `@testing-library/jest-dom/vitest`, which clears 182 `tsc` errors, and `pr.yml` now runs `typecheck` | **yes** |
+| `fork-notes` | this file, the docs, and fork-only tooling config | no |
+
+`deploy.sh` holds the authoritative list of branches to merge (`BRANCHES`, gitignored).
+`tests/branches-cover-deploy.sh` fails if a branch merged into `deploy` is missing from it.
 
 `framed-batch-fetch` is the only branch with an ongoing cost, and it is one file.
 
@@ -67,14 +80,15 @@ is a conversation with them, not a patch here.
 git fetch upstream
 git checkout main && git merge --ff-only upstream/main && git push origin main
 
-for b in multi-connection-sidebar root-renders-connections framed-batch-fetch fork-notes; do
+BRANCHES="multi-connection-sidebar fix-radio-switch root-renders-connections framed-batch-fetch auto-connect heard-on-current-lora nodes-cards-view fix-typecheck fork-notes"
+for b in $BRANCHES; do
   git checkout "$b" && git rebase upstream/main && git push --force-with-lease origin "$b"
 done
 
 # deploy is REBUILT, not merged into: it stays exactly "upstream + our changes"
 git checkout deploy
 git reset --hard upstream/main
-git merge --no-edit multi-connection-sidebar root-renders-connections framed-batch-fetch fork-notes
+git merge --no-edit $BRANCHES
 git push --force-with-lease origin deploy
 
 pnpm install && pnpm run build:all

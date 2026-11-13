@@ -98,6 +98,32 @@ source_hash:
 - docs/HANDOVER.md `26ca254a67e7b6580b66188468c660527c6ef3abf5fc6a30a713a8c12415585f`
 - docs/handover/2026-10-31-1800.md `bb780570c2003f1cd9b96af821a4512d281cfe86a622ce5359d98902bf289862` (byte-identical to the pre-edit HANDOVER.md, `cmp` verified)
 
+## Fixes (Peter, 2026-11-13: "they all need fixing, dont care what order")
+
+Each entry is tried red first (`idiot try`), fixed, then `idiot prove`n green.
+
+| entry | change | files | home branch |
+|---|---|---|---|
+| `the-deploy-rebuild-drops-the-nodes-cards-branch` | add `nodes-cards-view` (and the typecheck branch below) to `BRANCHES`, after the branches it depends on; add both to the FORK.md table and its rebase loop. Test: a script asserting every branch merged into `deploy` is named in `BRANCHES` | `deploy.sh` (gitignored, no commit), `FORK.md` | `fork-notes` |
+| `the-format-check-fails-on-the-register-file` | add `idiot.yaml` to `.oxfmtrc.json` `ignorePatterns`. Test: `pnpm format` | `.oxfmtrc.json` | `fork-notes` |
+| `the-typecheck-fails-with-182-errors-and-nothing-runs-it` | `setup.ts` imports `@testing-library/jest-dom/vitest`; `pr.yml` runs `typecheck`. Test: `tsc -p apps/web/tsconfig.json --noEmit` | `apps/web/src/tests/setup.ts`, `.github/workflows/pr.yml` | new `fix-typecheck`, cut from `origin/main` (upstream-able) |
+| `the-table-default-sort-is-an-english-literal` | new vitest test with a non-English heading; fix in `Table/index.tsx` | `apps/web/src/components/generic/Table/index.tsx` and its test | `nodes-cards-view` |
+| `the-node-cards-are-twice-as-tall-as-their-content` | the lost scratchpad harness is replaced by a checked-in test that measures card height in a real browser, so `prove` can re-run it | decided when the trial is written | `nodes-cards-view` |
+
+Also touched, outside the entries' `files` lists but needed for the fix to take effect or to be
+provable: `apps/web/src/pages/Nodes/index.tsx` (passes `id: "connection"` / `"lastHeard"` to the
+Table), new tests `tests/branches-cover-deploy.sh`,
+`apps/web/src/components/generic/Table/defaultSort.test.tsx` and
+`apps/web/src/pages/Nodes/NodeCards.layout.test.tsx` (measures the cards in Chrome against a
+fresh build; skipped when there is no build or no Chrome, so `pnpm test` on a clean checkout
+still passes). The card-height entry's old harness lived in a scratchpad on the retired host;
+this one is checked in.
+
+Closure rung for all five is `mtime`, the weakest: the commits did not exist when `prove` ran.
+
+Work is done on `deploy` (where the register lives) and each commit is then cherry-picked to
+its home branch, because `deploy` is rebuilt and a commit made only there is lost.
+
 ## Found while doing it
 
 - `nodes-cards-view` is on no remote and not in `deploy.sh` `BRANCHES`; the next
