@@ -1,2 +1,2 @@
 $ bash tests/branches-cover-deploy.sh
-branches merged into deploy: 8, missing from BRANCHES: 0
+branches merged into deploy: 9, missing from BRANCHES: 0

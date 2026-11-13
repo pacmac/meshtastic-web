@@ -5,6 +5,6 @@ $ pnpm --dir apps/web exec vitest run src/components/generic/Table
 
  Test Files  2 passed (2)
       Tests  6 passed (6)
-   Start at  08:44:09
-   Duration  663ms (environment 35%, setup 25%, import 18%, tests 15%, transform 6%, worker 1%)
+   Start at  08:49:53
+   Duration  638ms (environment 34%, setup 27%, import 19%, tests 14%, transform 6%, worker 1%)
 
