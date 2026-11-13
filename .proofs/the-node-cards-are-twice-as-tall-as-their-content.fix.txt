@@ -20,6 +20,6 @@ tallest card 86px, limit 88px
 
  Test Files  1 passed (1)
       Tests  1 passed (1)
-   Start at  08:46:54
-   Duration  971ms (tests 55%, import 28%, transform 9%, setup 8%)
+   Start at  08:50:33
+   Duration  982ms (tests 57%, import 29%, setup 8%, transform 6%)
 

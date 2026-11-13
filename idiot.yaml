@@ -66,8 +66,8 @@
     exit: 0
     runs: 1
     failures: 0
-    at: '2026-11-13T08:44:10.285'
-    commit: c17da242-dirty
+    at: '2026-11-13T08:49:53.730'
+    commit: 7e85f63b-dirty
 - id: the-node-cards-are-twice-as-tall-as-their-content
   type: bug
   what: Each node card is 146px tall for about 52px of text; make them compact
@@ -87,15 +87,15 @@
     exit: 1
     runs: 1
     failures: 1
-    at: '2026-11-13T08:46:50.091'
-    commit: c17da242-dirty
+    at: '2026-11-13T08:50:21.833'
+    commit: 035f80ff-dirty
   fix:
     file: .proofs/the-node-cards-are-twice-as-tall-as-their-content.fix.txt
     exit: 0
     runs: 1
     failures: 0
-    at: '2026-11-13T08:46:55.424'
-    commit: c17da242-dirty
+    at: '2026-11-13T08:50:34.099'
+    commit: 7e85f63b-dirty
 - id: the-deploy-rebuild-drops-the-nodes-cards-branch
   type: bug
   what: deploy.sh BRANCHES omits nodes-cards-view, so ./deploy.sh update rebuilds deploy without the Nodes
@@ -122,8 +122,8 @@
     exit: 0
     runs: 1
     failures: 0
-    at: '2026-11-13T08:42:57.486'
-    commit: c17da242-dirty
+    at: '2026-11-13T08:49:53.894'
+    commit: 7e85f63b-dirty
 - id: the-format-check-fails-on-the-register-file
   type: bug
   what: pnpm format (oxfmt --check .) exits 1 on idiot.yaml, which only the idiot tool may write, so pnpm
@@ -149,8 +149,8 @@
     exit: 0
     runs: 1
     failures: 0
-    at: '2026-11-13T08:40:37.041'
-    commit: c17da242-dirty
+    at: '2026-11-13T08:50:39.466'
+    commit: 7e85f63b-dirty
 - id: the-typecheck-fails-with-182-errors-and-nothing-runs-it
   type: bug
   what: tsc --noEmit in apps/web reports 182 errors, every one a missing jest-dom matcher type; setup.ts
@@ -179,5 +179,5 @@
     exit: 0
     runs: 1
     failures: 0
-    at: '2026-11-13T08:42:05.937'
-    commit: c17da242-dirty
+    at: '2026-11-13T08:50:41.554'
+    commit: 7e85f63b-dirty
