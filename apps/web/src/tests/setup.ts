@@ -1,7 +1,7 @@
 import { cleanup } from "@testing-library/react";
 import { enableMapSet } from "immer";
 import { afterEach, vi } from "vitest";
-import "@testing-library/jest-dom";
+import "@testing-library/jest-dom/vitest";
 import "@testing-library/user-event";
 import channelsEN from "@public/i18n/locales/en/channels.json" with { type: "json" };
 import commandPaletteEN from "@public/i18n/locales/en/commandPalette.json" with { type: "json" };
