@@ -5,6 +5,9 @@ $ pnpm --dir apps/web exec vitest run src/pages/Nodes
 
  Test Files  3 passed (3)
       Tests  19 passed (19)
-   Start at  01:08:28
-   Duration  2.40s (environment 43%, setup 30%, transform 12%, import 9%, tests 6%, worker 1%)
+   Start at  08:33:48
+   Duration  935ms (environment 35%, setup 27%, import 15%, tests 14%, transform 8%, worker 1%)
+
+    Isolate  3 workers spawned · ~138ms startup each (spawn + environment, per file)
+             at least ~276ms faster with isolate: false — reuses workers across files instead of one per file
 
