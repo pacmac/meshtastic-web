@@ -10,7 +10,37 @@ here that is `meshtastic-web`, which is seated on nothing. Every peer conversati
 this fork lives on **mesh-gw's** channels, so every xsession call you make needs
 `--as mesh-gw`.
 
-Nothing is pushed. Three branches have no remote at all.
+> ### AMENDED 2026-11-13 — the repo was moved to a new host. Read this block before STATE.
+>
+> Everything below is as of **2026-10-31** unless this block says otherwise. The old copy is
+> `docs/handover/2026-10-31-1800.md`. What was re-measured on the new host (`aidev`):
+>
+> - **Pushed.** `deploy`, `fork-notes`, `auto-connect`, `heard-on-current-lora` and
+>   `fix-radio-switch` are each equal to their `origin/` ref. "Nothing is pushed" and "12 ahead"
+>   below are **stale**.
+> - **NOT pushed: `nodes-cards-view`** (local `28c7d257`, no upstream, absent from
+>   `git ls-remote origin`). Its commits are on `origin/deploy` through the merge `07861a81`,
+>   but the branch itself is on no remote.
+> - **And it is not in `deploy.sh`'s `BRANCHES`** (gitignored; seven names, no
+>   `nodes-cards-view`). `./deploy.sh update` rebuilds `deploy` from `BRANCHES`, so the next
+>   rebuild **silently drops the Nodes List/Cards toggle**. Not fixed here — it needs
+>   `deploy.sh`, which is outside this task. `fork-notes` (`FORK.md` branch table) is stale
+>   for the same branch.
+> - **New work since this was written:** `58e152f2` and `28c7d257` (Nodes page List/Cards
+>   toggle), merged as `07861a81`. This repo now has its **own `idiot.yaml`** (three entries,
+>   all about the Nodes page) and its **own mcpp project `meshtastic-web`**, so "this repo has
+>   no `idiot.yaml`" and "mcpp project is `mesh-gw`" below are stale, and `plan_file_attach`
+>   works here.
+> - **Host:** `aidev`. `meshtastic-web` and `mesh-gw` services are **inactive**; nothing
+>   listens on `:8089`, `:8001` or `:4403`. Node is **v26.13.0** (`.nvmrc` says 24).
+>   `node_modules` was absent and was reinstalled; the numbers in CHECKS are the old host's.
+> - **Unverified on this host:** the xsession `--as mesh-gw` instruction, every live-radio
+>   and nginx claim, and the gitignored files' contents (`deploy.sh`, `check.sh`,
+>   `nginx/mesh.conf`, `serve.py`, `.tools/buf` are present; they were not re-read).
+> - **`CLAUDE.md`** no longer imports `@AGENTS.md` — that file exists in no ref, including
+>   upstream, so the import was dangling upstream too.
+
+Nothing is pushed. Three branches have no remote at all. *(Stale — see the amendment above.)*
 
 > **ADDRESSES IN THIS REPO ARE PLACEHOLDERS.** `radio-a.example.net`, `radio-b.example.net`,
 > `nginx-host`, `<gateway-ip>`, `<nginx-ip>` and `<scratchpad>` stand in for the real ones.
@@ -120,7 +150,8 @@ steps 1–5 are mis-marked there, not here. Flagging, not touching.
    `@testing-library/jest-dom` type import in the vitest setup) or to stop advertising the
    script. See REMAINS.
 
-2. **TIDY - push, or decide not to.**
+2. **TIDY - push, or decide not to.** *(2026-11-13: done for every branch except
+   `nodes-cards-view`, which is on no remote and missing from `BRANCHES` — see the amendment.)*
    Second because it is cheap and the exposure grows: 12 commits on `deploy`, 4 on
    `fork-notes`, and `auto-connect` / `heard-on-current-lora` / `fix-radio-switch` exist on
    **no remote**. A disk failure loses three fixes that took a day to find. This needs
@@ -163,7 +194,8 @@ No open xsession item concerns this repo. See PEERS.
 
 ## STATE
 
-Re-queried at write-up time, not recalled.
+Re-queried at write-up time, not recalled. **As of 2026-10-31 on the old host — see the
+2026-11-13 amendment at the top for what changed.**
 
 | | |
 |---|---|
@@ -337,7 +369,7 @@ action was a listener, which timed out after 3600 s with `nothing arrived (0 unr
 
 ## SHIPPED
 
-All local. Nothing pushed.
+All local when written (2026-10-31). **Pushed since** — see the 2026-11-13 amendment at the top.
 
 | SHA | branch | what | evidence |
 |---|---|---|---|
@@ -408,7 +440,8 @@ shape: *"GET /device-config/{mac} now returns your SPA HTML with a 200, and our 
 PIN came from it."* Blocks every management page. The fix is in the gitignored vhost.
 
 **TIDY - three branches have no remote; `deploy` is 12 ahead; `fork-notes` tracks
-`origin/main`.**
+`origin/main`.** *(2026-11-13: the first three are fixed and `fork-notes` now tracks
+`origin/fork-notes`. Open instead: `nodes-cards-view` has no remote and is not in `BRANCHES`.)*
 
 **VERIFY - the card-wrap fix (`66bb9a7d`) was never seen rendered.** Asserted from the CSS.
 
@@ -576,7 +609,8 @@ filing my own tooling bug as a defect in the system under test.
 - `/since` — for the status round-ups.
 
 **Pairing that matters here:** `/idiot` sends an out-of-scope finding to the repo's bug
-ledger — but **this repo has no `idiot.yaml`**. The register is mesh-gw's. So a finding here
+ledger — but **this repo had no `idiot.yaml`** when this was written (it has one now, from
+2026-11-01). The register was mesh-gw's. So a finding here
 has nowhere to go except an mcpp task or this document, which is why REMAINS is longer than
 it would be in mesh-gw.
 
@@ -584,7 +618,8 @@ it would be in mesh-gw.
 
 ## TASKS
 
-mcpp project is **`mesh-gw`** for all of these — this repo has no project of its own.
+mcpp project is **`mesh-gw`** for all of these. *(2026-11-13: this repo now has its own
+project, `meshtastic-web`, with its own task list; the tasks below are still in `mesh-gw`.)*
 
 | task | state | spec |
 |---|---|---|
@@ -632,6 +667,10 @@ currently see.
 *Written by a session that did the work in this repo while seated as `mesh-gw`. Its context
 was not exhausted, but it made the errors in GOT WRONG and Peter caught three of them.
 Verify before you believe.*
+
+*Amended 2026-11-13 after the move to `aidev`: the block at the top, plus the stale-marked
+lines in PRIORITIES, STATE, SHIPPED, REMAINS, SKILLS and TASKS. Spec:
+`docs/housekeeping-after-the-host-move.md`. Everything not marked is still as of 2026-10-31.*
 
 *Amended the same day, after Peter set the direction in `WHERE THIS IS GOING`. The copy in
 `docs/handover/2026-10-31-0958.md` is this document before that amendment; the differences
