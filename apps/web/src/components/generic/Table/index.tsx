@@ -3,9 +3,21 @@ import { ChevronDownIcon, ChevronUpIcon } from "lucide-react";
 import React, { useMemo, useState } from "react";
 
 export interface Heading {
+  /** What is shown. Translated, so never used to recognise the column. */
   title: string;
+  /** Stable column key, e.g. "lastHeard". Falls back to `title` when absent. */
+  id?: string;
   sortable: boolean;
 }
+
+const columnKey = (heading: Heading) => heading.id ?? heading.title;
+
+// The columns the table treats specially, by `id` or — for headings that carry no id —
+// by their English title.
+const isLastHeard = (key: string) =>
+  key === "lastHeard" || key === "Last Heard";
+const isConnection = (key: string) =>
+  key === "connection" || key === "Connection";
 
 interface Cell {
   content: React.ReactNode;
@@ -37,14 +49,16 @@ function numericHops(hopsAway: string | number): number {
 }
 
 export const Table = ({ headings, rows }: TableProps) => {
-  const [sortColumn, setSortColumn] = useState<string | null>("Last Heard");
+  const [sortColumn, setSortColumn] = useState<string | null>(
+    () => headings.map(columnKey).find(isLastHeard) ?? null,
+  );
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
 
-  const handleSort = (title: string) => {
-    if (sortColumn === title) {
+  const handleSort = (key: string) => {
+    if (sortColumn === key) {
       setSortOrder(sortOrder === "asc" ? "desc" : "asc");
     } else {
-      setSortColumn(title);
+      setSortColumn(key);
       setSortOrder("asc");
     }
   };
@@ -54,7 +68,7 @@ export const Table = ({ headings, rows }: TableProps) => {
       return rows;
     }
 
-    const columnIndex = headings.findIndex((h) => h.title === sortColumn);
+    const columnIndex = headings.findIndex((h) => columnKey(h) === sortColumn);
     if (columnIndex === -1) {
       return rows;
     }
@@ -71,7 +85,7 @@ export const Table = ({ headings, rows }: TableProps) => {
       let aValue: string | number;
       let bValue: string | number;
 
-      if (sortColumn === "Connection") {
+      if (isConnection(sortColumn)) {
         aValue = numericHops(aCell.sortValue);
         bValue = numericHops(bCell.sortValue);
       } else {
@@ -102,15 +116,15 @@ export const Table = ({ headings, rows }: TableProps) => {
                 heading.sortable &&
                   "cursor-pointer hover:brightness-hover active:brightness-press",
               )}
-              onClick={() => heading.sortable && handleSort(heading.title)}
+              onClick={() => heading.sortable && handleSort(columnKey(heading))}
               onKeyUp={(e) => {
                 if (heading.sortable && (e.key === "Enter" || e.key === " ")) {
-                  handleSort(heading.title);
+                  handleSort(columnKey(heading));
                 }
               }}
               tabIndex={heading.sortable ? 0 : -1}
               aria-sort={
-                sortColumn === heading.title
+                sortColumn === columnKey(heading)
                   ? sortOrder === "asc"
                     ? "ascending"
                     : "descending"
@@ -120,7 +134,7 @@ export const Table = ({ headings, rows }: TableProps) => {
               <div className="flex items-center gap-2">
                 {heading.title}
                 {heading.sortable &&
-                  sortColumn === heading.title &&
+                  sortColumn === columnKey(heading) &&
                   (sortOrder === "asc" ? (
                     <ChevronUpIcon size={16} aria-hidden="true" />
                   ) : (

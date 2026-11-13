@@ -134,8 +134,16 @@ const NodesPage = (): JSX.Element => {
   const tableHeadings: Heading[] = [
     { title: "", sortable: false },
     { title: t("nodesTable.headings.longName"), sortable: true },
-    { title: t("nodesTable.headings.connection"), sortable: true },
-    { title: t("nodesTable.headings.lastHeard"), sortable: true },
+    {
+      id: "connection",
+      title: t("nodesTable.headings.connection"),
+      sortable: true,
+    },
+    {
+      id: "lastHeard",
+      title: t("nodesTable.headings.lastHeard"),
+      sortable: true,
+    },
     { title: t("nodesTable.headings.encryption"), sortable: false },
     { title: t("unit.snr"), sortable: true },
     { title: t("nodesTable.headings.model"), sortable: true },

@@ -1,11 +1,25 @@
-$ node /tmp/claude-0/-usr-share-pac-dev-projects-mt-radar-meshtastic-web/b2765faf-4f7e-46a3-96d9-dd1a971f585d/scratchpad/harness/check-compact.mjs
-┌─────────┬─────────┬───────┬───────┬─────────┬──────────┐
-│ (index) │ theme   │ width │ cards │ tallest │ shortest │
-├─────────┼─────────┼───────┼───────┼─────────┼──────────┤
-│ 0       │ 'light' │ 1440  │ 9     │ 86      │ 70       │
-│ 1       │ 'light' │ 1024  │ 9     │ 86      │ 70       │
-│ 2       │ 'dark'  │ 1440  │ 9     │ 86      │ 70       │
-│ 3       │ 'dark'  │ 1024  │ 9     │ 86      │ 70       │
-└─────────┴─────────┴───────┴───────┴─────────┴──────────┘
+$ sh -c pnpm run build:all >/dev/null 2>&1 && pnpm --dir apps/web exec vitest run --silent=false src/pages/Nodes/NodeCards.layout.test.tsx
+
+ RUN  v5.0.4 /usr/share/pac/dev/projects/mt-radar/meshtastic-web/apps/web
+
+stdout | src/pages/Nodes/NodeCards.layout.test.tsx > NodeCards height in a real browser > no card is taller than 88px, light or dark, at 1440 and 1024 wide
+light 1440px: 9 cards, tallest 86px, shortest 70px
+
+stdout | src/pages/Nodes/NodeCards.layout.test.tsx > NodeCards height in a real browser > no card is taller than 88px, light or dark, at 1440 and 1024 wide
+light 1024px: 9 cards, tallest 86px, shortest 70px
+
+stdout | src/pages/Nodes/NodeCards.layout.test.tsx > NodeCards height in a real browser > no card is taller than 88px, light or dark, at 1440 and 1024 wide
+dark 1440px: 9 cards, tallest 86px, shortest 70px
+
+stdout | src/pages/Nodes/NodeCards.layout.test.tsx > NodeCards height in a real browser > no card is taller than 88px, light or dark, at 1440 and 1024 wide
+dark 1024px: 9 cards, tallest 86px, shortest 70px
+
+stdout | src/pages/Nodes/NodeCards.layout.test.tsx > NodeCards height in a real browser > no card is taller than 88px, light or dark, at 1440 and 1024 wide
 tallest card 86px, limit 88px
-ok
+
+
+ Test Files  1 passed (1)
+      Tests  1 passed (1)
+   Start at  08:46:54
+   Duration  971ms (tests 55%, import 28%, transform 9%, setup 8%)
+

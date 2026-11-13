@@ -1,0 +1,3 @@
+$ bash tests/branches-cover-deploy.sh
+MISSING from BRANCHES: nodes-cards-view
+branches merged into deploy: 8, missing from BRANCHES: 1

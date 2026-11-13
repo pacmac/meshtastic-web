@@ -1,0 +1,10 @@
+$ pnpm --dir apps/web exec vitest run src/components/generic/Table
+
+ RUN  v5.0.4 /usr/share/pac/dev/projects/mt-radar/meshtastic-web/apps/web
+
+
+ Test Files  2 passed (2)
+      Tests  6 passed (6)
+   Start at  08:44:09
+   Duration  663ms (environment 35%, setup 25%, import 18%, tests 15%, transform 6%, worker 1%)
+
