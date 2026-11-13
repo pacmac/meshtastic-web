@@ -43,11 +43,31 @@
   files:
   - apps/web/src/components/generic/Table/index.tsx
   test:
-    command: null
-    criterion: with a non-English heading set, Table still sorts by last heard on first render
+    command:
+    - pnpm
+    - --dir
+    - apps/web
+    - exec
+    - vitest
+    - run
+    - src/components/generic/Table
+    criterion: with a non-English heading set, Table still sorts by last heard on first render and by
+      hop count on Connection
     runs: 1
-  trial: null
-  fix: null
+  trial:
+    file: .proofs/the-table-default-sort-is-an-english-literal.trial.txt
+    exit: 1
+    runs: 1
+    failures: 1
+    at: '2026-11-13T08:43:31.340'
+    commit: c17da242-dirty
+  fix:
+    file: .proofs/the-table-default-sort-is-an-english-literal.fix.txt
+    exit: 0
+    runs: 1
+    failures: 0
+    at: '2026-11-13T08:44:10.285'
+    commit: c17da242-dirty
 - id: the-node-cards-are-twice-as-tall-as-their-content
   type: bug
   what: Each node card is 146px tall for about 52px of text; make them compact
@@ -56,21 +76,108 @@
   - apps/web/src/pages/Nodes/NodeCards.tsx
   test:
     command:
-    - node
-    - /tmp/claude-0/-usr-share-pac-dev-projects-mt-radar-meshtastic-web/b2765faf-4f7e-46a3-96d9-dd1a971f585d/scratchpad/harness/check-compact.mjs
-    criterion: no card taller than 88px in light or dark at 1440 and 1024 wide
+    - sh
+    - -c
+    - pnpm run build:all >/dev/null 2>&1 && pnpm --dir apps/web exec vitest run --silent=false src/pages/Nodes/NodeCards.layout.test.tsx
+    criterion: no card taller than 88px in light or dark at 1440 and 1024 wide, measured in Chrome against
+      a fresh build
     runs: 1
   trial:
     file: .proofs/the-node-cards-are-twice-as-tall-as-their-content.trial.txt
     exit: 1
     runs: 1
     failures: 1
-    at: '2026-11-01T01:21:28.377'
-    commit: 58e152f2-dirty
+    at: '2026-11-13T08:46:50.091'
+    commit: c17da242-dirty
   fix:
     file: .proofs/the-node-cards-are-twice-as-tall-as-their-content.fix.txt
     exit: 0
     runs: 1
     failures: 0
-    at: '2026-11-01T01:23:42.425'
-    commit: 58e152f2-dirty
+    at: '2026-11-13T08:46:55.424'
+    commit: c17da242-dirty
+- id: the-deploy-rebuild-drops-the-nodes-cards-branch
+  type: bug
+  what: deploy.sh BRANCHES omits nodes-cards-view, so ./deploy.sh update rebuilds deploy without the Nodes
+    List/Cards toggle; FORK.md's branch table omits it too
+  spec: docs/housekeeping-after-the-host-move.md
+  files:
+  - deploy.sh
+  - FORK.md
+  test:
+    command:
+    - bash
+    - tests/branches-cover-deploy.sh
+    criterion: every branch merged into deploy is named in BRANCHES
+    runs: 1
+  trial:
+    file: .proofs/the-deploy-rebuild-drops-the-nodes-cards-branch.trial.txt
+    exit: 1
+    runs: 1
+    failures: 1
+    at: '2026-11-13T08:42:35.234'
+    commit: c17da242-dirty
+  fix:
+    file: .proofs/the-deploy-rebuild-drops-the-nodes-cards-branch.fix.txt
+    exit: 0
+    runs: 1
+    failures: 0
+    at: '2026-11-13T08:42:57.486'
+    commit: c17da242-dirty
+- id: the-format-check-fails-on-the-register-file
+  type: bug
+  what: pnpm format (oxfmt --check .) exits 1 on idiot.yaml, which only the idiot tool may write, so pnpm
+    check fails
+  spec: docs/housekeeping-after-the-host-move.md
+  files:
+  - .oxfmtrc.json
+  test:
+    command:
+    - pnpm
+    - format
+    criterion: pnpm format exits 0 with idiot.yaml present
+    runs: 1
+  trial:
+    file: .proofs/the-format-check-fails-on-the-register-file.trial.txt
+    exit: 1
+    runs: 1
+    failures: 1
+    at: '2026-11-13T08:40:31.184'
+    commit: c17da242-dirty
+  fix:
+    file: .proofs/the-format-check-fails-on-the-register-file.fix.txt
+    exit: 0
+    runs: 1
+    failures: 0
+    at: '2026-11-13T08:40:37.041'
+    commit: c17da242-dirty
+- id: the-typecheck-fails-with-182-errors-and-nothing-runs-it
+  type: bug
+  what: tsc --noEmit in apps/web reports 182 errors, every one a missing jest-dom matcher type; setup.ts
+    imports @testing-library/jest-dom rather than its vitest entry; no CI job runs typecheck
+  spec: docs/housekeeping-after-the-host-move.md
+  files:
+  - apps/web/src/tests/setup.ts
+  - .github/workflows/pr.yml
+  test:
+    command:
+    - sh
+    - -c
+    - out=$(pnpm --dir apps/web exec tsc -p tsconfig.json --noEmit 2>&1); rc=$?; echo "tsc exit=$rc errors=$(printf
+      "%s\n" "$out" | grep -c "error TS")"; exit $rc
+    criterion: tsc -p apps/web/tsconfig.json --noEmit exits 0, reported as errors=0
+    runs: 1
+  trial:
+    file: .proofs/the-typecheck-fails-with-182-errors-and-nothing-runs-it.trial.txt
+    exit: 1
+    runs: 1
+    failures: 1
+    at: '2026-11-13T08:41:46.629'
+    commit: c17da242-dirty
+  fix:
+    file: .proofs/the-typecheck-fails-with-182-errors-and-nothing-runs-it.fix.txt
+    exit: 0
+    runs: 1
+    failures: 0
+    at: '2026-11-13T08:42:05.937'
+    commit: c17da242-dirty

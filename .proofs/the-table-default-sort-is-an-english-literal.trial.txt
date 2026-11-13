@@ -1,0 +1,64 @@
+$ pnpm --dir apps/web exec vitest run src/components/generic/Table
+
+ RUN  v5.0.4 /usr/share/pac/dev/projects/mt-radar/meshtastic-web/apps/web
+
+ ❯ src/components/generic/Table/defaultSort.test.tsx (2 tests | 2 failed) 27ms
+   ❯ Table with translated headings (2)
+     × sorts by last heard, newest first, on first render 19ms
+     × sorts the connection column by hop count, not as text 7ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/components/generic/Table/defaultSort.test.tsx > Table with translated headings > sorts by last heard, newest first, on first render
+AssertionError: expected [ 'A', 'B', 'C' ] to deeply equal [ 'B', 'C', 'A' ]
+
+- Expected
++ Received
+
+  [
++   "A",
+    "B",
+    "C",
+-   "A",
+  ]
+
+ ❯ src/components/generic/Table/defaultSort.test.tsx:51:30
+     49|   it("sorts by last heard, newest first, on first render", () => {
+     50|     render(<Table headings={germanHeadings} rows={rows} />);
+     51|     expect(firstCellOrder()).toEqual(["B", "C", "A"]);
+       |                              ^
+     52|     expect(
+     53|       screen.getByRole("columnheader", { name: "Zuletzt gehört" }),
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  src/components/generic/Table/defaultSort.test.tsx > Table with translated headings > sorts the connection column by hop count, not as text
+AssertionError: expected [ 'A', 'C', 'B' ] to deeply equal [ 'B', 'C', 'A' ]
+
+- Expected
++ Received
+
+  [
+-   "B",
+-   "C",
+    "A",
++   "C",
++   "B",
+  ]
+
+ ❯ src/components/generic/Table/defaultSort.test.tsx:60:30
+     58|     render(<Table headings={germanHeadings} rows={rows} />);
+     59|     fireEvent.click(screen.getByRole("columnheader", { name: "Verbindu…
+     60|     expect(firstCellOrder()).toEqual(["B", "C", "A"]);
+       |                              ^
+     61|   });
+     62| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed | 1 passed (2)
+      Tests  2 failed | 4 passed (6)
+   Start at  08:43:30
+   Duration  668ms (environment 36%, setup 25%, import 18%, tests 13%, transform 8%, worker 1%)
+

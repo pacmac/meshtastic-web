@@ -1,0 +1,6 @@
+$ pnpm format
+$ oxfmt --check .
+Checking formatting...
+
+All matched files use the correct format.
+Finished in 83ms on 729 files using 2 threads.

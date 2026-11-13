@@ -1,0 +1,2 @@
+$ sh -c out=$(pnpm --dir apps/web exec tsc -p tsconfig.json --noEmit 2>&1); rc=$?; echo "tsc exit=$rc errors=$(printf "%s\n" "$out" | grep -c "error TS")"; exit $rc
+tsc exit=0 errors=0
