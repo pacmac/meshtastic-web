@@ -1,11 +1,43 @@
-$ node /tmp/claude-0/-usr-share-pac-dev-projects-mt-radar-meshtastic-web/b2765faf-4f7e-46a3-96d9-dd1a971f585d/scratchpad/harness/check-compact.mjs
-┌─────────┬─────────┬───────┬───────┬─────────┬──────────┐
-│ (index) │ theme   │ width │ cards │ tallest │ shortest │
-├─────────┼─────────┼───────┼───────┼─────────┼──────────┤
-│ 0       │ 'light' │ 1440  │ 9     │ 146     │ 146      │
-│ 1       │ 'light' │ 1024  │ 9     │ 146     │ 146      │
-│ 2       │ 'dark'  │ 1440  │ 9     │ 146     │ 146      │
-│ 3       │ 'dark'  │ 1024  │ 9     │ 146     │ 146      │
-└─────────┴─────────┴───────┴───────┴─────────┴──────────┘
+$ sh -c pnpm run build:all >/dev/null 2>&1 && pnpm --dir apps/web exec vitest run --silent=false src/pages/Nodes/NodeCards.layout.test.tsx
+
+ RUN  v5.0.4 /usr/share/pac/dev/projects/mt-radar/meshtastic-web/apps/web
+
+stdout | src/pages/Nodes/NodeCards.layout.test.tsx > NodeCards height in a real browser > no card is taller than 88px, light or dark, at 1440 and 1024 wide
+light 1440px: 9 cards, tallest 146px, shortest 146px
+
+stdout | src/pages/Nodes/NodeCards.layout.test.tsx > NodeCards height in a real browser > no card is taller than 88px, light or dark, at 1440 and 1024 wide
+light 1024px: 9 cards, tallest 146px, shortest 146px
+
+stdout | src/pages/Nodes/NodeCards.layout.test.tsx > NodeCards height in a real browser > no card is taller than 88px, light or dark, at 1440 and 1024 wide
+dark 1440px: 9 cards, tallest 146px, shortest 146px
+
+stdout | src/pages/Nodes/NodeCards.layout.test.tsx > NodeCards height in a real browser > no card is taller than 88px, light or dark, at 1440 and 1024 wide
+dark 1024px: 9 cards, tallest 146px, shortest 146px
+
+stdout | src/pages/Nodes/NodeCards.layout.test.tsx > NodeCards height in a real browser > no card is taller than 88px, light or dark, at 1440 and 1024 wide
 tallest card 146px, limit 88px
-FAIL: cards are taller than their content needs
+
+ ❯ src/pages/Nodes/NodeCards.layout.test.tsx (1 test | 1 failed) 518ms
+   ❯ NodeCards height in a real browser (1)
+     × no card is taller than 88px, light or dark, at 1440 and 1024 wide 517ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/pages/Nodes/NodeCards.layout.test.tsx > NodeCards height in a real browser > no card is taller than 88px, light or dark, at 1440 and 1024 wide
+AssertionError: expected 146 to be less than or equal to 88
+ ❯ src/pages/Nodes/NodeCards.layout.test.tsx:97:23
+     95|       }
+     96|       console.log(`tallest card ${tallest}px, limit ${LIMIT_PX}px`);
+     97|       expect(tallest).toBeLessThanOrEqual(LIMIT_PX);
+       |                       ^
+     98|     }, 60_000);
+     99|   },
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed (1)
+   Start at  08:46:49
+   Duration  958ms (tests 57%, import 28%, setup 8%, transform 6%)
+
