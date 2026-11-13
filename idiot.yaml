@@ -33,8 +33,8 @@
     exit: 0
     runs: 1
     failures: 0
-    at: '2026-11-01T01:08:31.149'
-    commit: b4d7304c-dirty
+    at: '2026-11-13T08:33:49.698'
+    commit: a6a62fb9-dirty
 - id: the-table-default-sort-is-an-english-literal
   type: bug
   what: Table sorts by the English heading text, so outside English the default sort matches no column
