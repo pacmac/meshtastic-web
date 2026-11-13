@@ -54,6 +54,9 @@ jobs:
         run: pnpm run check
         continue-on-error: true
 
+      - name: Typecheck web package
+        run: pnpm --filter "./apps/web" run typecheck
+
       - name: Run tests
         run: pnpm run test
 
