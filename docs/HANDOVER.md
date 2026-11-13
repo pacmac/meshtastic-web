@@ -18,14 +18,17 @@ this fork lives on **mesh-gw's** channels, so every xsession call you make needs
 > - **Pushed.** `deploy`, `fork-notes`, `auto-connect`, `heard-on-current-lora` and
 >   `fix-radio-switch` are each equal to their `origin/` ref. "Nothing is pushed" and "12 ahead"
 >   below are **stale**.
-> - **NOT pushed: `nodes-cards-view`** (local `28c7d257`, no upstream, absent from
->   `git ls-remote origin`). Its commits are on `origin/deploy` through the merge `07861a81`,
->   but the branch itself is on no remote.
-> - **And it is not in `deploy.sh`'s `BRANCHES`** (gitignored; seven names, no
->   `nodes-cards-view`). `./deploy.sh update` rebuilds `deploy` from `BRANCHES`, so the next
->   rebuild **silently drops the Nodes List/Cards toggle**. Not fixed here — it needs
->   `deploy.sh`, which is outside this task. `fork-notes` (`FORK.md` branch table) is stale
->   for the same branch.
+> - **Found and FIXED the same day:** `nodes-cards-view` was on no remote and missing from
+>   `deploy.sh`'s `BRANCHES`, so the next `./deploy.sh update` would have silently dropped the
+>   Nodes List/Cards toggle. It is now pushed, in `BRANCHES`, and `FORK.md` lists all nine
+>   branches. `tests/branches-cover-deploy.sh` fails if that drifts again.
+> - **Also fixed 2026-11-13** (register `idiot.yaml`, all six entries `CLOSED/commit`):
+>   `pnpm typecheck` 182 errors → 0, and `pr.yml` now runs it (new branch `fix-typecheck`);
+>   `pnpm format` no longer fails on `idiot.yaml`; the Table's default sort and Connection sort
+>   no longer depend on the English heading (headings carry an `id`); the card-height check is
+>   now a checked-in test (`NodeCards.layout.test.tsx`, needs a build and Chrome, skipped
+>   without them) instead of a script lost with the old host. Rebuilding `deploy` from
+>   `BRANCHES` was verified to give an identical tree.
 > - **New work since this was written:** `58e152f2` and `28c7d257` (Nodes page List/Cards
 >   toggle), merged as `07861a81`. This repo now has its **own `idiot.yaml`** (three entries,
 >   all about the Nodes page) and its **own mcpp project `meshtastic-web`**, so "this repo has
@@ -150,8 +153,7 @@ steps 1–5 are mis-marked there, not here. Flagging, not touching.
    `@testing-library/jest-dom` type import in the vitest setup) or to stop advertising the
    script. See REMAINS.
 
-2. **TIDY - push, or decide not to.** *(2026-11-13: done for every branch except
-   `nodes-cards-view`, which is on no remote and missing from `BRANCHES` — see the amendment.)*
+2. **TIDY - push, or decide not to.** *(2026-11-13: done for every branch.)*
    Second because it is cheap and the exposure grows: 12 commits on `deploy`, 4 on
    `fork-notes`, and `auto-connect` / `heard-on-current-lora` / `fix-radio-switch` exist on
    **no remote**. A disk failure loses three fixes that took a day to find. This needs
@@ -392,7 +394,9 @@ frames each**. That was the cause of "hangs after loading about 50 nodes".
 
 ## REMAINS
 
-**TOOL - nothing runs `pnpm typecheck`, and it fails with 180 errors.**
+**TOOL - nothing runs `pnpm typecheck`, and it fails with 180 errors.** *(2026-11-13: FIXED —
+182 errors, one `setup.ts` import, and `pr.yml` runs it now; branch `fix-typecheck`. The text
+below is the 2026-10-31 diagnosis, kept because it was right.)*
 From `apps/web`: `pnpm exec tsc -p tsconfig.json --noEmit` → **exit 1**.
 Every one of the 180 is the same class — `Property 'toBeChecked' does not exist on type
 'Assertion<…>'` — i.e. `@testing-library/jest-dom`'s matchers are not in the type graph.
@@ -413,7 +417,7 @@ version check already assumed. Reproduce with
 `<scratchpad>/probe_raw15.py`
 (**scratchpad — will not survive; copy it into the repo if you want to keep it**).
 
-**BUG - `FORK.md`'s branch table is stale.** It lists four branches and the tree has seven;
+**BUG - `FORK.md`'s branch table is stale.** *(2026-11-13: FIXED — all nine branches listed.)* It lists four branches and the tree has seven;
 it does not mention `auto-connect`, `heard-on-current-lora`, `fix-radio-switch`, and its
 "keeping up with upstream" loop names only the original four, so following it verbatim
 **drops three branches from `deploy`**. The correct list is in `deploy.sh`'s `BRANCHES`,
@@ -441,7 +445,7 @@ PIN came from it."* Blocks every management page. The fix is in the gitignored v
 
 **TIDY - three branches have no remote; `deploy` is 12 ahead; `fork-notes` tracks
 `origin/main`.** *(2026-11-13: the first three are fixed and `fork-notes` now tracks
-`origin/fork-notes`. Open instead: `nodes-cards-view` has no remote and is not in `BRANCHES`.)*
+`origin/fork-notes`. `nodes-cards-view` was fixed the same day.)*
 
 **VERIFY - the card-wrap fix (`66bb9a7d`) was never seen rendered.** Asserted from the CSS.
 
